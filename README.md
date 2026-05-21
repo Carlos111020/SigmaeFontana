@@ -72,6 +72,10 @@ http://localhost:8080/swagger-ui.html
 
 Las pruebas usan H2 en modo PostgreSQL y cubren arranque de contexto, login JWT, creacion de catalogos/estudiantes y el flujo de ingreso con bloqueo de doble ingreso.
 
+## Seguridad
+
+La guia de controles minimos para JWT, credenciales, roles y despliegue esta en [`docs/seguridad-operativa.md`](docs/seguridad-operativa.md).
+
 ## Usuarios semilla
 
 Al iniciar con una base vacia y `APP_SEED_ENABLED=true` se crean datos de prueba:

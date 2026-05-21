@@ -91,6 +91,49 @@ class ApiFlowTests {
     }
 
     @Test
+    void coordinadorNoPuedeCrearUsuario() throws Exception {
+        var token = login("coordinador@sigmae.edu.co", "Coord123*");
+        var body = """
+                {
+                  "nombres": "Auxiliar",
+                  "apellidos": "Prueba",
+                  "correo": "auxiliar.prueba@sigmae.edu.co",
+                  "password": "Auxiliar123*",
+                  "rol": "PORTERIA"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/usuarios")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void noPermiteConsultarDashboardSinToken() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard/metricas"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rechazaLoginConCredencialesInvalidas() throws Exception {
+        var body = """
+                {
+                  "correo": "admin@sigmae.edu.co",
+                  "password": "PasswordIncorrecto123*"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
     void porteriaRegistraIngresoYBloqueaDobleIngreso() throws Exception {
         var token = login("porteria@sigmae.edu.co", "Porteria123*");
         var puntoAccesoId = puntoAccesoRepository.findByNombre("Porteria principal")
