@@ -112,6 +112,28 @@ class ApiFlowTests {
     }
 
     @Test
+    void noPermiteConsultarDashboardSinToken() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard/metricas"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rechazaLoginConCredencialesInvalidas() throws Exception {
+        var body = """
+                {
+                  "correo": "admin@sigmae.edu.co",
+                  "password": "PasswordIncorrecto123*"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
     void porteriaRegistraIngresoYBloqueaDobleIngreso() throws Exception {
         var token = login("porteria@sigmae.edu.co", "Porteria123*");
         var puntoAccesoId = puntoAccesoRepository.findByNombre("Porteria principal")
