@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: sigmae-fontana
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sigmae_fontana}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    time-zone: America/Bogota
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:SIGMAE_FONTANA_SECRET_KEY_FOR_JWT_2026_MINIMUM_256_BITS}
+    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:480}
+  seed:
+    enabled: ${APP_SEED_ENABLED:true}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
