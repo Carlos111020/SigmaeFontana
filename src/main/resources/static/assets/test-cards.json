@@ -1,0 +1,52 @@
+[
+  {
+    "code": "EST-001",
+    "name": "Sofia Gomez",
+    "grade": "6A",
+    "guardian": {
+      "name": "Laura Gomez",
+      "relationship": "Madre",
+      "email": "laura.gomez@example.com"
+    }
+  },
+  {
+    "code": "EST-002",
+    "name": "Mateo Rojas",
+    "grade": "7B",
+    "guardian": {
+      "name": "Andres Rojas",
+      "relationship": "Padre",
+      "email": "andres.rojas@example.com"
+    }
+  },
+  {
+    "code": "EST-003",
+    "name": "Valentina Perez",
+    "grade": "8A",
+    "guardian": {
+      "name": "Claudia Perez",
+      "relationship": "Madre",
+      "email": "claudia.perez@example.com"
+    }
+  },
+  {
+    "code": "EST-004",
+    "name": "Juan Martinez",
+    "grade": "9B",
+    "guardian": {
+      "name": "Ricardo Martinez",
+      "relationship": "Padre",
+      "email": "ricardo.martinez@example.com"
+    }
+  },
+  {
+    "code": "EST-005",
+    "name": "Isabella Torres",
+    "grade": "10A",
+    "guardian": {
+      "name": "Patricia Torres",
+      "relationship": "Madre",
+      "email": "patricia.torres@example.com"
+    }
+  }
+]

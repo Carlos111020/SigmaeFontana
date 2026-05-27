@@ -7,8 +7,9 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface RegistroAccesoRepository extends JpaRepository<RegistroAcceso, Long> {
+public interface RegistroAccesoRepository extends JpaRepository<RegistroAcceso, Long>, JpaSpecificationExecutor<RegistroAcceso> {
 
     long countByTipoRegistroAndFechaHoraBetween(TipoRegistro tipoRegistro, LocalDateTime desde, LocalDateTime hasta);
 

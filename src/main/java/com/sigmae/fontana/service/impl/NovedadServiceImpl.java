@@ -4,7 +4,9 @@ import com.sigmae.fontana.dto.novedad.EstadoNovedadRequest;
 import com.sigmae.fontana.dto.novedad.NovedadRequest;
 import com.sigmae.fontana.dto.novedad.NovedadResponse;
 import com.sigmae.fontana.entity.Novedad;
+import com.sigmae.fontana.entity.enums.EstadoNovedad;
 import com.sigmae.fontana.entity.enums.TipoNotificacion;
+import com.sigmae.fontana.entity.enums.TipoNovedad;
 import com.sigmae.fontana.exception.ResourceNotFoundException;
 import com.sigmae.fontana.mapper.NovedadMapper;
 import com.sigmae.fontana.repository.EstudianteRepository;
@@ -13,9 +15,12 @@ import com.sigmae.fontana.repository.UsuarioRepository;
 import com.sigmae.fontana.service.NotificationService;
 import com.sigmae.fontana.service.NovedadService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @RequiredArgsConstructor
@@ -54,5 +59,25 @@ public class NovedadServiceImpl implements NovedadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Novedad no encontrada"));
         novedad.setEstado(request.estado());
         return novedadMapper.toResponse(novedad);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NovedadResponse> listar(EstadoNovedad estado, Long estudianteId, TipoNovedad tipoNovedad) {
+        Specification<Novedad> spec = (root, query, builder) -> {
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            if (estado != null) {
+                predicates.add(builder.equal(root.get("estado"), estado));
+            }
+            if (estudianteId != null) {
+                predicates.add(builder.equal(root.get("estudiante").get("id"), estudianteId));
+            }
+            if (tipoNovedad != null) {
+                predicates.add(builder.equal(root.get("tipoNovedad"), tipoNovedad));
+            }
+            query.orderBy(builder.desc(root.get("fechaHora")));
+            return builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return novedadRepository.findAll(spec).stream().map(novedadMapper::toResponse).toList();
     }
 }

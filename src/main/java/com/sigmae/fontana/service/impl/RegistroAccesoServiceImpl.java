@@ -25,9 +25,11 @@ import com.sigmae.fontana.service.RegistroAccesoService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,6 +106,39 @@ public class RegistroAccesoServiceImpl implements RegistroAccesoService {
     public Page<RegistroAccesoResponse> historial(Long estudianteId, Pageable pageable) {
         return registroAccesoRepository.findByEstudianteIdOrderByFechaHoraDesc(estudianteId, pageable)
                 .map(registroAccesoMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAccesoResponse> filtrar(
+            Long estudianteId,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            TipoRegistro tipoRegistro,
+            Long puntoAccesoId,
+            Pageable pageable
+    ) {
+        Specification<RegistroAcceso> spec = (root, query, builder) -> {
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            if (estudianteId != null) {
+                predicates.add(builder.equal(root.get("estudiante").get("id"), estudianteId));
+            }
+            if (fechaDesde != null) {
+                predicates.add(builder.greaterThanOrEqualTo(root.get("fechaHora"), fechaDesde.atStartOfDay()));
+            }
+            if (fechaHasta != null) {
+                predicates.add(builder.lessThan(root.get("fechaHora"), fechaHasta.plusDays(1).atStartOfDay()));
+            }
+            if (tipoRegistro != null) {
+                predicates.add(builder.equal(root.get("tipoRegistro"), tipoRegistro));
+            }
+            if (puntoAccesoId != null) {
+                predicates.add(builder.equal(root.get("puntoAcceso").get("id"), puntoAccesoId));
+            }
+            query.orderBy(builder.desc(root.get("fechaHora")));
+            return builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return registroAccesoRepository.findAll(spec, pageable).map(registroAccesoMapper::toResponse);
     }
 
     private RegistroAcceso crearRegistro(
