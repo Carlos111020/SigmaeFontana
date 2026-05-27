@@ -2,7 +2,7 @@
   {
     "code": "EST-001",
     "name": "Sofia Gomez",
-    "grade": "5A",
+    "grade": "6A",
     "guardian": {
       "name": "Laura Gomez",
       "relationship": "Madre",
@@ -12,7 +12,7 @@
   {
     "code": "EST-002",
     "name": "Mateo Rojas",
-    "grade": "5A",
+    "grade": "7B",
     "guardian": {
       "name": "Andres Rojas",
       "relationship": "Padre",
@@ -22,7 +22,7 @@
   {
     "code": "EST-003",
     "name": "Valentina Perez",
-    "grade": "5A",
+    "grade": "8A",
     "guardian": {
       "name": "Claudia Perez",
       "relationship": "Madre",
@@ -32,7 +32,7 @@
   {
     "code": "EST-004",
     "name": "Juan Martinez",
-    "grade": "5A",
+    "grade": "9B",
     "guardian": {
       "name": "Ricardo Martinez",
       "relationship": "Padre",
@@ -42,7 +42,7 @@
   {
     "code": "EST-005",
     "name": "Isabella Torres",
-    "grade": "5A",
+    "grade": "10A",
     "guardian": {
       "name": "Patricia Torres",
       "relationship": "Madre",

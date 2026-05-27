@@ -42,6 +42,7 @@ const resultBox = document.querySelector("#resultBox");
 const lastEventTime = document.querySelector("#lastEventTime");
 const gateArm = document.querySelector("#gateArm");
 const studentMarker = document.querySelector("#studentMarker");
+const toast = document.querySelector("#toast");
 
 async function init() {
     await loadTestCards();
@@ -73,7 +74,7 @@ function renderCards() {
     cardList.innerHTML = testCards.map(card => `
         <button class="test-card" type="button" data-code="${card.code}">
             <strong>${card.code}</strong>
-            <span>${card.name}</span>
+            <span>${card.name} - ${card.grade}</span>
         </button>
     `).join("");
 
@@ -168,6 +169,7 @@ async function registerAccess(event) {
         const data = await parseResponse(response);
         openGate(data.codigoTarjeta);
         renderSuccess(data, false);
+        notifyGuardian(data, false);
     } catch (error) {
         if (error.status === 401 || error.status === 403) {
             clearSession();
@@ -180,6 +182,7 @@ async function registerAccess(event) {
         if (demoData) {
             openGate(code);
             renderSuccess(demoData, true);
+            notifyGuardian(demoData, true);
             return;
         }
 
@@ -235,8 +238,9 @@ function buildDemoAccess(code) {
 }
 
 function renderSuccess(data, isDemo) {
-    lastEventTime.textContent = formatDateTime(data.fechaHora);
-    const guardians = data.acudientesNotificados.map(acudiente => `
+    const displayData = applyCardOverrides(data);
+    lastEventTime.textContent = formatDateTime(displayData.fechaHora);
+    const guardians = displayData.acudientesNotificados.map(acudiente => `
         <div class="guardian">
             <strong>${acudiente.nombres} ${acudiente.apellidos}</strong>
             <div>${acudiente.parentesco} - ${acudiente.correo}</div>
@@ -248,14 +252,43 @@ function renderSuccess(data, isDemo) {
         <div class="result-title">Ingreso autorizado</div>
         ${isDemo ? `<p class="demo-note">Registro demo desde archivo de prueba. El backend queda intacto si el estudiante no existe en BD.</p>` : ""}
         <div class="data-list">
-            <div class="data-row"><span>Estudiante</span><strong>${data.estudiante}</strong></div>
-            <div class="data-row"><span>Carnet</span><strong>${data.codigoTarjeta}</strong></div>
-            <div class="data-row"><span>Grado</span><strong>${data.grado}</strong></div>
-            <div class="data-row"><span>Punto</span><strong>${data.puntoAcceso}</strong></div>
-            <div class="data-row"><span>Correo</span><strong>${data.mensajeCorreo}</strong></div>
+            <div class="data-row"><span>Estudiante</span><strong>${displayData.estudiante}</strong></div>
+            <div class="data-row"><span>Carnet</span><strong>${displayData.codigoTarjeta}</strong></div>
+            <div class="data-row"><span>Grado</span><strong>${displayData.grado}</strong></div>
+            <div class="data-row"><span>Punto</span><strong>${displayData.puntoAcceso}</strong></div>
+            <div class="data-row"><span>Correo</span><strong>${displayData.mensajeCorreo}</strong></div>
         </div>
         <div class="guardian-list">${guardians}</div>
     `;
+}
+
+function applyCardOverrides(data) {
+    const card = testCards.find(item => item.code === data.codigoTarjeta);
+    if (!card) {
+        return data;
+    }
+
+    return {
+        ...data,
+        grado: card.grade
+    };
+}
+
+function notifyGuardian(data, isDemo) {
+    const displayData = applyCardOverrides(data);
+    const guardian = displayData.acudientesNotificados[0];
+    const recipient = guardian ? guardian.correo : "acudiente";
+    const mode = isDemo ? "Correo demo enviado" : "Correo enviado";
+    showToast(`${mode} a ${recipient} por el ingreso de ${displayData.estudiante}.`);
+}
+
+function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("visible");
+    window.clearTimeout(showToast.timeoutId);
+    showToast.timeoutId = window.setTimeout(() => {
+        toast.classList.remove("visible");
+    }, 4200);
 }
 
 function renderProfile() {
