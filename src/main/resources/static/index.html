@@ -15,9 +15,17 @@
         </div>
         <div class="session-card">
             <span id="sessionStatus" class="status-pill status-muted">Sin conexion</span>
-            <button id="loginButton" class="secondary-button" type="button">Conectar porteria</button>
+            <select id="roleSelect" aria-label="Rol de ingreso">
+                <option value="PORTERIA">Porteria</option>
+                <option value="ADMINISTRADOR">Administrador</option>
+                <option value="COORDINADOR">Coordinador</option>
+                <option value="ACUDIENTE">Acudiente</option>
+            </select>
+            <button id="loginButton" class="secondary-button" type="button">Iniciar sesion</button>
         </div>
     </section>
+
+    <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>
 
     <section class="workspace">
         <aside class="side-panel" aria-label="Tarjetas de prueba">

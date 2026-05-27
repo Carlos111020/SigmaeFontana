@@ -1,14 +1,39 @@
 const API_BASE = "/api/v1";
-const PORTERIA_LOGIN = {
-    correo: "porteria@sigmae.edu.co",
-    password: "Porteria123*"
+const ROLE_LOGINS = {
+    ADMINISTRADOR: {
+        label: "Administrador",
+        correo: "admin@sigmae.edu.co",
+        password: "Admin123*",
+        scope: "Gestiona usuarios, catalogos y configuracion general."
+    },
+    COORDINADOR: {
+        label: "Coordinador",
+        correo: "coordinador@sigmae.edu.co",
+        password: "Coord123*",
+        scope: "Consulta estudiantes, dashboard, novedades e historial."
+    },
+    PORTERIA: {
+        label: "Porteria",
+        correo: "porteria@sigmae.edu.co",
+        password: "Porteria123*",
+        scope: "Registra ingresos y salidas desde la talanquera."
+    },
+    ACUDIENTE: {
+        label: "Acudiente",
+        correo: "acudiente@sigmae.edu.co",
+        password: "Acudiente123*",
+        scope: "Consulta sus estudiantes y notificaciones."
+    }
 };
 
 let token = localStorage.getItem("sigmaeToken") || "";
+let activeUser = readStoredUser();
 let testCards = [];
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
+const roleSelect = document.querySelector("#roleSelect");
+const profilePanel = document.querySelector("#profilePanel");
 const cardList = document.querySelector("#cardList");
 const cardCode = document.querySelector("#cardCode");
 const gateForm = document.querySelector("#gateForm");
@@ -20,8 +45,16 @@ const studentMarker = document.querySelector("#studentMarker");
 
 async function init() {
     await loadTestCards();
+    if (activeUser?.rol && ROLE_LOGINS[activeUser.rol]) {
+        roleSelect.value = activeUser.rol;
+    }
     refreshSession();
     loginButton.addEventListener("click", login);
+    roleSelect.addEventListener("change", () => {
+        if (!token) {
+            renderProfile();
+        }
+    });
     gateForm.addEventListener("submit", registerAccess);
 }
 
@@ -53,35 +86,41 @@ function renderCards() {
 }
 
 function refreshSession() {
-    if (token) {
-        sessionStatus.textContent = "Porteria conectada";
+    if (token && activeUser) {
+        sessionStatus.textContent = `${roleLabel(activeUser.rol)} conectado`;
         sessionStatus.className = "status-pill status-ok";
-        loginButton.textContent = "Reconectar";
+        loginButton.textContent = "Cambiar sesion";
+        renderProfile();
         return;
     }
 
     sessionStatus.textContent = "Sin conexion";
     sessionStatus.className = "status-pill status-muted";
-    loginButton.textContent = "Conectar porteria";
+    loginButton.textContent = "Iniciar sesion";
+    renderProfile();
 }
 
 async function login() {
+    const credentials = ROLE_LOGINS[roleSelect.value];
     setBusy(true);
     try {
         const response = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(PORTERIA_LOGIN)
+            body: JSON.stringify({
+                correo: credentials.correo,
+                password: credentials.password
+            })
         });
         const data = await parseResponse(response);
         token = data.token;
+        activeUser = data.usuario;
         localStorage.setItem("sigmaeToken", token);
+        localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
         refreshSession();
-        renderInfo("Sesion iniciada", "La porteria quedo conectada con JWT para registrar ingresos.");
+        renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
     } catch (error) {
-        token = "";
-        localStorage.removeItem("sigmaeToken");
-        refreshSession();
+        clearSession();
         renderError(error.message);
     } finally {
         setBusy(false);
@@ -90,7 +129,7 @@ async function login() {
 
 async function registerAccess(event) {
     event.preventDefault();
-    const code = cardCode.value.trim();
+    const code = cardCode.value.trim().toUpperCase();
 
     if (!code) {
         renderError("Digita o selecciona un codigo de carnet.");
@@ -98,10 +137,17 @@ async function registerAccess(event) {
     }
 
     if (!token) {
+        roleSelect.value = "PORTERIA";
         await login();
         if (!token) {
             return;
         }
+    }
+
+    if (!canUseGate()) {
+        denyGate(code);
+        renderError("Este perfil no puede registrar ingresos. Selecciona Porteria o Coordinador.");
+        return;
     }
 
     setBusy(true);
@@ -121,13 +167,22 @@ async function registerAccess(event) {
         });
         const data = await parseResponse(response);
         openGate(data.codigoTarjeta);
-        renderSuccess(data);
+        renderSuccess(data, false);
     } catch (error) {
         if (error.status === 401 || error.status === 403) {
-            token = "";
-            localStorage.removeItem("sigmaeToken");
-            refreshSession();
+            clearSession();
+            denyGate(code);
+            renderError("La sesion expiro o el rol no tiene permisos.");
+            return;
         }
+
+        const demoData = buildDemoAccess(code);
+        if (demoData) {
+            openGate(code);
+            renderSuccess(demoData, true);
+            return;
+        }
+
         denyGate(code);
         renderError(error.message);
     } finally {
@@ -148,7 +203,38 @@ async function parseResponse(response) {
     return data;
 }
 
-function renderSuccess(data) {
+function buildDemoAccess(code) {
+    const card = testCards.find(item => item.code === code);
+    if (!card) {
+        return null;
+    }
+
+    const now = new Date().toISOString();
+    const [guardianNames, guardianLastName] = splitName(card.guardian.name);
+    return {
+        registroId: null,
+        fechaHora: now,
+        codigoTarjeta: card.code,
+        estudianteId: null,
+        estudiante: card.name,
+        grado: card.grade,
+        estadoPermanencia: "DENTRO_DEL_PLANTEL",
+        puntoAcceso: "Porteria principal",
+        mensajeCorreo: `Correo demo enviado a ${card.guardian.email} con hora de llegada: ${formatDateTime(now)}`,
+        acudientesNotificados: [
+            {
+                id: null,
+                nombres: guardianNames,
+                apellidos: guardianLastName,
+                parentesco: card.guardian.relationship,
+                correo: card.guardian.email,
+                correoSimuladoEnviado: true
+            }
+        ]
+    };
+}
+
+function renderSuccess(data, isDemo) {
     lastEventTime.textContent = formatDateTime(data.fechaHora);
     const guardians = data.acudientesNotificados.map(acudiente => `
         <div class="guardian">
@@ -160,6 +246,7 @@ function renderSuccess(data) {
     resultBox.className = "result-card success";
     resultBox.innerHTML = `
         <div class="result-title">Ingreso autorizado</div>
+        ${isDemo ? `<p class="demo-note">Registro demo desde archivo de prueba. El backend queda intacto si el estudiante no existe en BD.</p>` : ""}
         <div class="data-list">
             <div class="data-row"><span>Estudiante</span><strong>${data.estudiante}</strong></div>
             <div class="data-row"><span>Carnet</span><strong>${data.codigoTarjeta}</strong></div>
@@ -168,6 +255,28 @@ function renderSuccess(data) {
             <div class="data-row"><span>Correo</span><strong>${data.mensajeCorreo}</strong></div>
         </div>
         <div class="guardian-list">${guardians}</div>
+    `;
+}
+
+function renderProfile() {
+    const selected = ROLE_LOGINS[roleSelect.value];
+    if (!activeUser || !token) {
+        profilePanel.innerHTML = `
+            <div>
+                <strong>Perfil no iniciado</strong>
+                <span>Selecciona un rol: ${selected.label}</span>
+            </div>
+            <p>${selected.scope}</p>
+        `;
+        return;
+    }
+
+    profilePanel.innerHTML = `
+        <div>
+            <strong>${activeUser.nombres} ${activeUser.apellidos}</strong>
+            <span>${roleLabel(activeUser.rol)} - ${activeUser.correo}</span>
+        </div>
+        <p>${ROLE_LOGINS[activeUser.rol]?.scope || "Perfil activo en SIGMAE."}</p>
     `;
 }
 
@@ -210,6 +319,38 @@ function setBusy(isBusy) {
     scanButton.disabled = isBusy;
     loginButton.disabled = isBusy;
     scanButton.textContent = isBusy ? "Procesando..." : "Registrar ingreso";
+}
+
+function canUseGate() {
+    return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
+}
+
+function clearSession() {
+    token = "";
+    activeUser = null;
+    localStorage.removeItem("sigmaeToken");
+    localStorage.removeItem("sigmaeUser");
+    refreshSession();
+}
+
+function readStoredUser() {
+    try {
+        return JSON.parse(localStorage.getItem("sigmaeUser"));
+    } catch (error) {
+        return null;
+    }
+}
+
+function roleLabel(role) {
+    return ROLE_LOGINS[role]?.label || role || "Usuario";
+}
+
+function splitName(fullName) {
+    const parts = fullName.split(" ");
+    if (parts.length === 1) {
+        return [fullName, ""];
+    }
+    return [parts.slice(0, -1).join(" "), parts.at(-1)];
 }
 
 function formatDateTime(value) {

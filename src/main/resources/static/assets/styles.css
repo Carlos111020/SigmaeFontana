@@ -26,7 +26,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -73,6 +74,34 @@ h2 {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.profile-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 10px 28px rgba(23, 32, 38, 0.08);
+}
+
+.profile-panel strong,
+.profile-panel span {
+    display: block;
+}
+
+.profile-panel span,
+.profile-panel p {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.profile-panel p {
+    margin: 0;
 }
 
 .status-pill {
@@ -262,7 +291,8 @@ h2 {
     gap: 10px;
 }
 
-input {
+input,
+select {
     width: 100%;
     min-height: 44px;
     padding: 0 12px;
@@ -272,9 +302,15 @@ input {
     color: var(--text);
 }
 
-input:focus {
+input:focus,
+select:focus {
     outline: 3px solid rgba(20, 108, 95, 0.18);
     border-color: var(--primary);
+}
+
+select {
+    width: 160px;
+    cursor: pointer;
 }
 
 .primary-button,
@@ -372,12 +408,26 @@ input:focus {
     background: #eef8f6;
 }
 
+.demo-note {
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    color: #5c4105;
+    background: #fff4ce;
+    font-size: 0.86rem;
+}
+
 @media (max-width: 980px) {
     .workspace {
         grid-template-columns: 1fr;
     }
 
     .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-panel {
         align-items: flex-start;
         flex-direction: column;
     }
@@ -395,6 +445,10 @@ input:focus {
         grid-template-columns: 1fr;
         flex-direction: column;
         align-items: stretch;
+    }
+
+    select {
+        width: 100%;
     }
 
     .gate-stage {
