@@ -31,6 +31,29 @@ select {
     font: inherit;
 }
 
+.mode-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.mode-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfd;
+    cursor: pointer;
+}
+
+.mode-row input {
+    width: auto;
+    min-height: auto;
+}
+
 .app-shell {
     width: min(1180px, calc(100% - 32px));
     margin: 0 auto;
@@ -442,6 +465,63 @@ select {
     transform: translateY(0);
 }
 
+.dashboard-panel {
+    display: none;
+    margin-top: 16px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.dashboard-panel.visible {
+    display: block;
+}
+
+.dashboard-content {
+    display: grid;
+    gap: 16px;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.metric-grid div,
+.dashboard-list {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfd;
+}
+
+.metric-grid span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.metric-grid strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.7rem;
+}
+
+.dashboard-list h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+}
+
+.dashboard-list p {
+    margin: 6px 0;
+    color: var(--muted);
+}
+
 @media (max-width: 980px) {
     .workspace {
         grid-template-columns: 1fr;
@@ -455,6 +535,10 @@ select {
     .profile-panel {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -478,5 +562,9 @@ select {
 
     .gate-stage {
         min-height: 320px;
+    }
+
+    .metric-grid {
+        grid-template-columns: 1fr;
     }
 }

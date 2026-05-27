@@ -48,9 +48,13 @@
 
             <form id="gateForm" class="scan-form">
                 <label for="cardCode">ID del carnet estudiantil</label>
+                <div class="mode-row" aria-label="Operacion de porteria">
+                    <label><input type="radio" name="accessMode" value="ingresos" checked> Ingreso</label>
+                    <label><input type="radio" name="accessMode" value="salidas"> Salida</label>
+                </div>
                 <div class="scan-row">
                     <input id="cardCode" name="cardCode" autocomplete="off" maxlength="30" placeholder="Ej: EST-001">
-                    <button id="scanButton" class="primary-button" type="submit">Registrar ingreso</button>
+                    <button id="scanButton" class="primary-button" type="submit">Registrar</button>
                 </div>
                 <p class="hint">El registro busca el estudiante, consulta su acudiente y genera la notificacion de llegada.</p>
             </form>
@@ -65,6 +69,14 @@
                 Esperando lectura de carnet.
             </div>
         </section>
+    </section>
+
+    <section id="dashboardPanel" class="dashboard-panel" aria-label="Dashboard coordinador">
+        <div class="panel-heading">
+            <h2>Dashboard coordinador</h2>
+            <button id="refreshDashboardButton" class="secondary-button" type="button">Actualizar</button>
+        </div>
+        <div id="dashboardContent" class="dashboard-content"></div>
     </section>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

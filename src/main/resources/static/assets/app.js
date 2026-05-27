@@ -43,6 +43,9 @@ const lastEventTime = document.querySelector("#lastEventTime");
 const gateArm = document.querySelector("#gateArm");
 const studentMarker = document.querySelector("#studentMarker");
 const toast = document.querySelector("#toast");
+const dashboardPanel = document.querySelector("#dashboardPanel");
+const dashboardContent = document.querySelector("#dashboardContent");
+const refreshDashboardButton = document.querySelector("#refreshDashboardButton");
 
 async function init() {
     await loadTestCards();
@@ -57,6 +60,7 @@ async function init() {
         }
     });
     gateForm.addEventListener("submit", registerAccess);
+    refreshDashboardButton.addEventListener("click", loadDashboard);
 }
 
 async function loadTestCards() {
@@ -92,6 +96,7 @@ function refreshSession() {
         sessionStatus.className = "status-pill status-ok";
         loginButton.textContent = "Cambiar sesion";
         renderProfile();
+        updateRoleView();
         return;
     }
 
@@ -99,6 +104,7 @@ function refreshSession() {
     sessionStatus.className = "status-pill status-muted";
     loginButton.textContent = "Iniciar sesion";
     renderProfile();
+    updateRoleView();
 }
 
 async function login() {
@@ -120,6 +126,9 @@ async function login() {
         localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
         refreshSession();
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
+        if (activeUser.rol === "COORDINADOR") {
+            await loadDashboard();
+        }
     } catch (error) {
         clearSession();
         renderError(error.message);
@@ -153,23 +162,31 @@ async function registerAccess(event) {
 
     setBusy(true);
     resetGate();
+    const mode = getAccessMode();
 
     try {
-        const response = await fetch(`${API_BASE}/talanquera/ingresos`, {
+        const endpoint = mode === "ingresos" ? `${API_BASE}/talanquera/ingresos` : `${API_BASE}/registros-acceso/salidas`;
+        const payload = mode === "ingresos"
+                ? { codigoTarjeta: code, observacion: "Ingreso registrado desde simulador web" }
+                : {
+                    identificadorEstudiante: code,
+                    puntoAccesoId: 1,
+                    observacion: "Salida registrada desde simulador web",
+                    crearNovedadSalidaAnticipada: false
+                };
+        const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({
-                codigoTarjeta: code,
-                observacion: "Ingreso registrado desde simulador web"
-            })
+            body: JSON.stringify(payload)
         });
         const data = await parseResponse(response);
-        openGate(data.codigoTarjeta);
-        renderSuccess(data, false);
-        notifyGuardian(data, false);
+        const normalized = normalizeAccessResponse(data, code, mode);
+        openGate(normalized.codigoTarjeta);
+        renderSuccess(normalized, false);
+        notifyGuardian(normalized, false);
     } catch (error) {
         if (error.status === 401 || error.status === 403) {
             clearSession();
@@ -178,7 +195,7 @@ async function registerAccess(event) {
             return;
         }
 
-        const demoData = buildDemoAccess(code);
+        const demoData = buildDemoAccess(code, mode);
         if (demoData) {
             openGate(code);
             renderSuccess(demoData, true);
@@ -206,7 +223,7 @@ async function parseResponse(response) {
     return data;
 }
 
-function buildDemoAccess(code) {
+function buildDemoAccess(code, mode = "ingresos") {
     const card = testCards.find(item => item.code === code);
     if (!card) {
         return null;
@@ -221,9 +238,10 @@ function buildDemoAccess(code) {
         estudianteId: null,
         estudiante: card.name,
         grado: card.grade,
-        estadoPermanencia: "DENTRO_DEL_PLANTEL",
+        estadoPermanencia: mode === "ingresos" ? "DENTRO_DEL_PLANTEL" : "FUERA_DEL_PLANTEL",
         puntoAcceso: "Porteria principal",
-        mensajeCorreo: `Correo demo enviado a ${card.guardian.email} con hora de llegada: ${formatDateTime(now)}`,
+        mensajeCorreo: `Correo demo enviado a ${card.guardian.email} con hora de ${mode === "ingresos" ? "llegada" : "salida"}: ${formatDateTime(now)}`,
+        operacion: mode === "ingresos" ? "INGRESO" : "SALIDA",
         acudientesNotificados: [
             {
                 id: null,
@@ -231,6 +249,40 @@ function buildDemoAccess(code) {
                 apellidos: guardianLastName,
                 parentesco: card.guardian.relationship,
                 correo: card.guardian.email,
+                correoSimuladoEnviado: true
+            }
+        ]
+    };
+}
+
+function normalizeAccessResponse(data, code, mode) {
+    if (data.codigoTarjeta) {
+        return {
+            ...data,
+            operacion: "INGRESO"
+        };
+    }
+
+    const card = testCards.find(item => item.code === code);
+    const [guardianNames, guardianLastName] = splitName(card?.guardian?.name || "Acudiente");
+    return {
+        registroId: data.id,
+        fechaHora: data.fechaHora,
+        codigoTarjeta: code,
+        estudianteId: data.estudianteId,
+        estudiante: data.estudiante,
+        grado: card?.grade || "No registrado",
+        estadoPermanencia: data.estadoPermanencia,
+        puntoAcceso: data.puntoAcceso,
+        mensajeCorreo: `Correo simulado enviado al acudiente con hora de salida: ${formatDateTime(data.fechaHora)}`,
+        operacion: mode === "ingresos" ? "INGRESO" : "SALIDA",
+        acudientesNotificados: [
+            {
+                id: null,
+                nombres: guardianNames,
+                apellidos: guardianLastName,
+                parentesco: card?.guardian?.relationship || "Acudiente",
+                correo: card?.guardian?.email || "correo.acudiente@example.com",
                 correoSimuladoEnviado: true
             }
         ]
@@ -249,7 +301,7 @@ function renderSuccess(data, isDemo) {
 
     resultBox.className = "result-card success";
     resultBox.innerHTML = `
-        <div class="result-title">Ingreso autorizado</div>
+        <div class="result-title">${displayData.operacion === "SALIDA" ? "Salida registrada" : "Ingreso autorizado"}</div>
         ${isDemo ? `<p class="demo-note">Registro demo desde archivo de prueba. El backend queda intacto si el estudiante no existe en BD.</p>` : ""}
         <div class="data-list">
             <div class="data-row"><span>Estudiante</span><strong>${displayData.estudiante}</strong></div>
@@ -279,7 +331,61 @@ function notifyGuardian(data, isDemo) {
     const guardian = displayData.acudientesNotificados[0];
     const recipient = guardian ? guardian.correo : "acudiente";
     const mode = isDemo ? "Correo demo enviado" : "Correo enviado";
-    showToast(`${mode} a ${recipient} por el ingreso de ${displayData.estudiante}.`);
+    const operation = displayData.operacion === "SALIDA" ? "salida" : "ingreso";
+    showToast(`${mode} a ${recipient} por el ${operation} de ${displayData.estudiante}.`);
+}
+
+async function loadDashboard() {
+    if (!token || activeUser?.rol !== "COORDINADOR") {
+        dashboardContent.innerHTML = `<p class="hint">Inicia sesion como Coordinador para consultar metricas reales.</p>`;
+        return;
+    }
+
+    dashboardContent.innerHTML = `<p class="hint">Cargando dashboard...</p>`;
+    try {
+        const [metrics, registros, novedades] = await Promise.all([
+            apiGet("/dashboard/metricas"),
+            apiGet("/registros-acceso?size=5"),
+            apiGet("/novedades")
+        ]);
+        renderDashboard(metrics, registros.content || [], novedades);
+    } catch (error) {
+        dashboardContent.innerHTML = `<p class="hint">${error.message}</p>`;
+    }
+}
+
+async function apiGet(path) {
+    const response = await fetch(`${API_BASE}${path}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    return parseResponse(response);
+}
+
+function renderDashboard(metrics, registros, novedades) {
+    dashboardContent.innerHTML = `
+        <div class="metric-grid">
+            <div><span>Presentes</span><strong>${metrics.estudiantesPresentes}</strong></div>
+            <div><span>Ingresos hoy</span><strong>${metrics.ingresosDelDia}</strong></div>
+            <div><span>Salidas hoy</span><strong>${metrics.salidasDelDia}</strong></div>
+            <div><span>Novedades</span><strong>${metrics.novedadesPendientes}</strong></div>
+        </div>
+        <div class="dashboard-list">
+            <h3>Ultimos accesos</h3>
+            ${registros.map(item => `<p>${item.tipoRegistro} - ${item.estudiante} - ${formatDateTime(item.fechaHora)}</p>`).join("") || "<p>Sin registros.</p>"}
+        </div>
+        <div class="dashboard-list">
+            <h3>Novedades</h3>
+            ${novedades.slice(0, 5).map(item => `<p>${item.estado} - ${item.estudiante} - ${item.tipoNovedad}</p>`).join("") || "<p>Sin novedades.</p>"}
+        </div>
+    `;
+}
+
+function updateRoleView() {
+    const isCoordinator = activeUser?.rol === "COORDINADOR";
+    dashboardPanel.classList.toggle("visible", isCoordinator);
+    if (!isCoordinator) {
+        dashboardContent.innerHTML = "";
+    }
 }
 
 function showToast(message) {
@@ -351,7 +457,7 @@ function resetGate() {
 function setBusy(isBusy) {
     scanButton.disabled = isBusy;
     loginButton.disabled = isBusy;
-    scanButton.textContent = isBusy ? "Procesando..." : "Registrar ingreso";
+    scanButton.textContent = isBusy ? "Procesando..." : "Registrar";
 }
 
 function canUseGate() {
@@ -391,6 +497,10 @@ function formatDateTime(value) {
         dateStyle: "short",
         timeStyle: "short"
     }).format(new Date(value));
+}
+
+function getAccessMode() {
+    return document.querySelector("input[name='accessMode']:checked")?.value || "ingresos";
 }
 
 init();
