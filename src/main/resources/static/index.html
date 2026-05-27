@@ -27,7 +27,7 @@
 
     <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>
 
-    <section class="workspace">
+    <section id="gateWorkspace" class="workspace">
         <aside class="side-panel" aria-label="Tarjetas de prueba">
             <div class="panel-heading">
                 <h2>Tarjetas test</h2>
@@ -77,6 +77,14 @@
             <button id="refreshDashboardButton" class="secondary-button" type="button">Actualizar</button>
         </div>
         <div id="dashboardContent" class="dashboard-content"></div>
+    </section>
+
+    <section id="guardianPanel" class="dashboard-panel" aria-label="Dashboard acudiente">
+        <div class="panel-heading">
+            <h2>Dashboard acudiente</h2>
+            <button id="refreshGuardianButton" class="secondary-button" type="button">Actualizar</button>
+        </div>
+        <div id="guardianContent" class="dashboard-content"></div>
     </section>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

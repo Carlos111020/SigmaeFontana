@@ -22,7 +22,7 @@ const ROLE_LOGINS = {
         label: "Acudiente",
         correo: "acudiente@sigmae.edu.co",
         password: "Acudiente123*",
-        scope: "Consulta sus estudiantes y notificaciones."
+        scope: "Consulta el estado, grado y hora de llegada de su estudiante."
     }
 };
 
@@ -46,6 +46,10 @@ const toast = document.querySelector("#toast");
 const dashboardPanel = document.querySelector("#dashboardPanel");
 const dashboardContent = document.querySelector("#dashboardContent");
 const refreshDashboardButton = document.querySelector("#refreshDashboardButton");
+const gateWorkspace = document.querySelector("#gateWorkspace");
+const guardianPanel = document.querySelector("#guardianPanel");
+const guardianContent = document.querySelector("#guardianContent");
+const refreshGuardianButton = document.querySelector("#refreshGuardianButton");
 
 async function init() {
     await loadTestCards();
@@ -61,6 +65,7 @@ async function init() {
     });
     gateForm.addEventListener("submit", registerAccess);
     refreshDashboardButton.addEventListener("click", loadDashboard);
+    refreshGuardianButton.addEventListener("click", loadGuardianDashboard);
 }
 
 async function loadTestCards() {
@@ -128,6 +133,9 @@ async function login() {
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
         if (activeUser.rol === "COORDINADOR") {
             await loadDashboard();
+        }
+        if (activeUser.rol === "ACUDIENTE") {
+            await loadGuardianDashboard();
         }
     } catch (error) {
         clearSession();
@@ -354,6 +362,21 @@ async function loadDashboard() {
     }
 }
 
+async function loadGuardianDashboard() {
+    if (!token || activeUser?.rol !== "ACUDIENTE") {
+        guardianContent.innerHTML = `<p class="hint">Inicia sesion como Acudiente para consultar el estado de tu estudiante.</p>`;
+        return;
+    }
+
+    guardianContent.innerHTML = `<p class="hint">Cargando informacion del estudiante...</p>`;
+    try {
+        const estudiantes = await apiGet("/acudientes/me/estudiantes");
+        renderGuardianDashboard(estudiantes);
+    } catch (error) {
+        guardianContent.innerHTML = `<p class="hint">${error.message}</p>`;
+    }
+}
+
 async function apiGet(path) {
     const response = await fetch(`${API_BASE}${path}`, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -380,11 +403,50 @@ function renderDashboard(metrics, registros, novedades) {
     `;
 }
 
+function renderGuardianDashboard(estudiantes) {
+    guardianContent.innerHTML = `
+        <div class="student-status-grid">
+            ${estudiantes.map(student => {
+                const present = student.estadoPermanencia === "DENTRO_DEL_PLANTEL";
+                const arrival = student.ultimoTipoRegistro === "INGRESO" && student.ultimaFechaHora
+                        ? formatDateTime(student.ultimaFechaHora)
+                        : "Sin ingreso registrado";
+                return `
+                    <article class="student-status-card">
+                        <div>
+                            <span>Estudiante</span>
+                            <strong>${student.estudiante}</strong>
+                        </div>
+                        <div>
+                            <span>Grado</span>
+                            <strong>${student.grado}</strong>
+                        </div>
+                        <div>
+                            <span>Hora de llegada</span>
+                            <strong>${arrival}</strong>
+                        </div>
+                        <div>
+                            <span>Estado</span>
+                            <strong class="${present ? "present-status" : "absent-status"}">${present ? "Presente" : "Ausente"}</strong>
+                        </div>
+                    </article>
+                `;
+            }).join("") || `<p class="hint">No hay estudiantes asociados a este acudiente.</p>`}
+        </div>
+    `;
+}
+
 function updateRoleView() {
     const isCoordinator = activeUser?.rol === "COORDINADOR";
+    const isGuardian = activeUser?.rol === "ACUDIENTE";
     dashboardPanel.classList.toggle("visible", isCoordinator);
+    guardianPanel.classList.toggle("visible", isGuardian);
+    gateWorkspace.classList.toggle("hidden", isGuardian);
     if (!isCoordinator) {
         dashboardContent.innerHTML = "";
+    }
+    if (!isGuardian) {
+        guardianContent.innerHTML = "";
     }
 }
 
