@@ -59,8 +59,12 @@ async function init() {
     refreshSession();
     loginButton.addEventListener("click", login);
     roleSelect.addEventListener("change", () => {
+        if (token && activeUser && roleSelect.value !== activeUser.rol) {
+            clearSession();
+        }
         if (!token) {
             renderProfile();
+            updateRoleView();
         }
     });
     gateForm.addEventListener("submit", registerAccess);
@@ -155,11 +159,8 @@ async function registerAccess(event) {
     }
 
     if (!token) {
-        roleSelect.value = "PORTERIA";
-        await login();
-        if (!token) {
-            return;
-        }
+        renderError("Primero inicia sesion como Porteria o Coordinador para usar la talanquera.");
+        return;
     }
 
     if (!canUseGate()) {
@@ -437,10 +438,11 @@ function renderGuardianDashboard(estudiantes) {
 }
 
 function updateRoleView() {
+    const effectiveRole = activeUser?.rol || roleSelect.value;
     const isCoordinator = activeUser?.rol === "COORDINADOR";
-    const isGuardian = activeUser?.rol === "ACUDIENTE";
+    const isGuardian = effectiveRole === "ACUDIENTE";
     dashboardPanel.classList.toggle("visible", isCoordinator);
-    guardianPanel.classList.toggle("visible", isGuardian);
+    guardianPanel.classList.toggle("visible", activeUser?.rol === "ACUDIENTE");
     gateWorkspace.classList.toggle("hidden", isGuardian);
     if (!isCoordinator) {
         dashboardContent.innerHTML = "";
