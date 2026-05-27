@@ -46,7 +46,7 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (!seedEnabled || usuarioRepository.count() > 0) {
+        if (!seedEnabled) {
             return;
         }
 
@@ -55,38 +55,107 @@ public class DataSeeder implements CommandLineRunner {
         usuario("Porteria", "Principal", "porteria@sigmae.edu.co", "Porteria123*", RolUsuario.PORTERIA);
         var usuarioAcudiente = usuario("Laura", "Gomez", "acudiente@sigmae.edu.co", "Acudiente123*", RolUsuario.ACUDIENTE);
 
-        var grado = new Grado();
-        grado.setNombre("5A");
-        grado.setNivel("Primaria");
-        gradoRepository.save(grado);
+        var grado = gradoRepository.findByNombre("5A").orElseGet(() -> {
+            var nuevoGrado = new Grado();
+            nuevoGrado.setNombre("5A");
+            nuevoGrado.setNivel("Primaria");
+            return gradoRepository.save(nuevoGrado);
+        });
 
-        var puntoAcceso = new PuntoAcceso();
-        puntoAcceso.setNombre("Porteria principal");
-        puntoAcceso.setUbicacion("Entrada principal del plantel");
-        puntoAccesoRepository.save(puntoAcceso);
+        puntoAccesoRepository.findByNombre("Porteria principal").orElseGet(() -> {
+            var puntoAcceso = new PuntoAcceso();
+            puntoAcceso.setNombre("Porteria principal");
+            puntoAcceso.setUbicacion("Entrada principal del plantel");
+            return puntoAccesoRepository.save(puntoAcceso);
+        });
 
-        var jornada = new Jornada();
-        jornada.setFecha(LocalDate.now());
-        jornada.setHoraInicio(LocalTime.of(6, 0));
-        jornada.setHoraFin(LocalTime.of(15, 0));
-        jornada.setEstado(EstadoJornada.ABIERTA);
-        jornadaRepository.save(jornada);
+        jornadaRepository.findByFecha(LocalDate.now()).orElseGet(() -> {
+            var jornada = new Jornada();
+            jornada.setFecha(LocalDate.now());
+            jornada.setHoraInicio(LocalTime.of(6, 0));
+            jornada.setHoraFin(LocalTime.of(15, 0));
+            jornada.setEstado(EstadoJornada.ABIERTA);
+            return jornadaRepository.save(jornada);
+        });
+
+        crearEstudianteConAcudiente(
+                "EST-001", "100000001", "Sofia", "Gomez",
+                "52000001", "Laura", "Gomez", "3001234567", "laura.gomez@example.com",
+                usuarioAcudiente, grado, "Madre"
+        );
+        crearEstudianteConAcudiente(
+                "EST-002", "100000002", "Mateo", "Rojas",
+                "52000002", "Andres", "Rojas", "3002223344", "andres.rojas@example.com",
+                null, grado, "Padre"
+        );
+        crearEstudianteConAcudiente(
+                "EST-003", "100000003", "Valentina", "Perez",
+                "52000003", "Claudia", "Perez", "3003334455", "claudia.perez@example.com",
+                null, grado, "Madre"
+        );
+        crearEstudianteConAcudiente(
+                "EST-004", "100000004", "Juan", "Martinez",
+                "52000004", "Ricardo", "Martinez", "3004445566", "ricardo.martinez@example.com",
+                null, grado, "Padre"
+        );
+        crearEstudianteConAcudiente(
+                "EST-005", "100000005", "Isabella", "Torres",
+                "52000005", "Patricia", "Torres", "3005556677", "patricia.torres@example.com",
+                null, grado, "Madre"
+        );
+
+        admin.setActivo(true);
+    }
+
+    private Usuario usuario(String nombres, String apellidos, String correo, String password, RolUsuario rol) {
+        var existente = usuarioRepository.findByCorreo(correo);
+        if (existente.isPresent()) {
+            return existente.get();
+        }
+
+        var usuario = new Usuario();
+        usuario.setNombres(nombres);
+        usuario.setApellidos(apellidos);
+        usuario.setCorreo(correo);
+        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setRol(rol);
+        usuario.setActivo(true);
+        return usuarioRepository.save(usuario);
+    }
+
+    private void crearEstudianteConAcudiente(
+            String codigoEstudiantil,
+            String documentoEstudiante,
+            String nombresEstudiante,
+            String apellidosEstudiante,
+            String documentoAcudiente,
+            String nombresAcudiente,
+            String apellidosAcudiente,
+            String telefonoAcudiente,
+            String correoAcudiente,
+            Usuario usuarioAcudiente,
+            Grado grado,
+            String parentesco
+    ) {
+        if (estudianteRepository.existsByCodigoEstudiantil(codigoEstudiantil)) {
+            return;
+        }
 
         var estudiante = new Estudiante();
-        estudiante.setCodigoEstudiantil("EST-001");
-        estudiante.setDocumento("100000001");
-        estudiante.setNombres("Sofia");
-        estudiante.setApellidos("Gomez");
+        estudiante.setCodigoEstudiantil(codigoEstudiantil);
+        estudiante.setDocumento(documentoEstudiante);
+        estudiante.setNombres(nombresEstudiante);
+        estudiante.setApellidos(apellidosEstudiante);
         estudiante.setEstadoPermanencia(EstadoPermanencia.FUERA_DEL_PLANTEL);
         estudiante.setGrado(grado);
         estudianteRepository.save(estudiante);
 
         var acudiente = new Acudiente();
-        acudiente.setDocumento("52000001");
-        acudiente.setNombres("Laura");
-        acudiente.setApellidos("Gomez");
-        acudiente.setTelefono("3001234567");
-        acudiente.setCorreo("laura.gomez@example.com");
+        acudiente.setDocumento(documentoAcudiente);
+        acudiente.setNombres(nombresAcudiente);
+        acudiente.setApellidos(apellidosAcudiente);
+        acudiente.setTelefono(telefonoAcudiente);
+        acudiente.setCorreo(correoAcudiente);
         acudiente.setUsuario(usuarioAcudiente);
         acudienteRepository.save(acudiente);
 
@@ -97,21 +166,8 @@ public class DataSeeder implements CommandLineRunner {
         relacion.setId(id);
         relacion.setEstudiante(estudiante);
         relacion.setAcudiente(acudiente);
-        relacion.setParentesco("Madre");
+        relacion.setParentesco(parentesco);
         relacion.setResponsablePrincipal(true);
         estudianteAcudienteRepository.save(relacion);
-
-        admin.setActivo(true);
-    }
-
-    private Usuario usuario(String nombres, String apellidos, String correo, String password, RolUsuario rol) {
-        var usuario = new Usuario();
-        usuario.setNombres(nombres);
-        usuario.setApellidos(apellidos);
-        usuario.setCorreo(correo);
-        usuario.setPassword(passwordEncoder.encode(password));
-        usuario.setRol(rol);
-        usuario.setActivo(true);
-        return usuarioRepository.save(usuario);
     }
 }

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIGMAE Fontana | Talanquera</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<main class="app-shell">
+    <section class="topbar" aria-label="Encabezado">
+        <div>
+            <p class="eyebrow">SIGMAE Fontana</p>
+            <h1>Control de ingreso</h1>
+        </div>
+        <div class="session-card">
+            <span id="sessionStatus" class="status-pill status-muted">Sin conexion</span>
+            <button id="loginButton" class="secondary-button" type="button">Conectar porteria</button>
+        </div>
+    </section>
+
+    <section class="workspace">
+        <aside class="side-panel" aria-label="Tarjetas de prueba">
+            <div class="panel-heading">
+                <h2>Tarjetas test</h2>
+                <span>5 carnets semilla</span>
+            </div>
+            <div id="cardList" class="test-cards"></div>
+        </aside>
+
+        <section class="gate-panel" aria-label="Simulador de talanquera">
+            <div class="gate-stage">
+                <div id="gateArm" class="gate-arm"></div>
+                <div class="gate-post"></div>
+                <div class="lane">
+                    <div class="lane-line"></div>
+                    <div id="studentMarker" class="student-marker">ID</div>
+                </div>
+            </div>
+
+            <form id="gateForm" class="scan-form">
+                <label for="cardCode">ID del carnet estudiantil</label>
+                <div class="scan-row">
+                    <input id="cardCode" name="cardCode" autocomplete="off" maxlength="30" placeholder="Ej: EST-001">
+                    <button id="scanButton" class="primary-button" type="submit">Registrar ingreso</button>
+                </div>
+                <p class="hint">El registro busca el estudiante, consulta su acudiente y genera la notificacion de llegada.</p>
+            </form>
+        </section>
+
+        <section class="result-panel" aria-label="Resultado del acceso">
+            <div class="panel-heading">
+                <h2>Resultado</h2>
+                <span id="lastEventTime">Sin eventos</span>
+            </div>
+            <div id="resultBox" class="empty-state">
+                Esperando lectura de carnet.
+            </div>
+        </section>
+    </section>
+</main>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

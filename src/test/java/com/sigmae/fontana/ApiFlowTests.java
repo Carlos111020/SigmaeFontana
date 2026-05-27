@@ -164,6 +164,27 @@ class ApiFlowTests {
                 .andExpect(jsonPath("$.status").value(409));
     }
 
+    @Test
+    void talanqueraRegistraIngresoYDevuelveAcudienteNotificado() throws Exception {
+        var token = login("porteria@sigmae.edu.co", "Porteria123*");
+        var body = """
+                {
+                  "codigoTarjeta": "EST-002",
+                  "observacion": "Ingreso desde simulador web"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/talanquera/ingresos")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.codigoTarjeta").value("EST-002"))
+                .andExpect(jsonPath("$.estudiante").value("Mateo Rojas"))
+                .andExpect(jsonPath("$.acudientesNotificados[0].correo").value("andres.rojas@example.com"))
+                .andExpect(jsonPath("$.acudientesNotificados[0].correoSimuladoEnviado").value(true));
+    }
+
     private String login(String correo, String password) throws Exception {
         var body = """
                 {
