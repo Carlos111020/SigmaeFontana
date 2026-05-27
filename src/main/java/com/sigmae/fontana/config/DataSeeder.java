@@ -83,26 +83,6 @@ public class DataSeeder implements CommandLineRunner {
                 "52000001", "Laura", "Gomez", "3001234567", "laura.gomez@example.com",
                 usuarioAcudiente, grado, "Madre"
         );
-        crearEstudianteConAcudiente(
-                "EST-002", "100000002", "Mateo", "Rojas",
-                "52000002", "Andres", "Rojas", "3002223344", "andres.rojas@example.com",
-                null, grado, "Padre"
-        );
-        crearEstudianteConAcudiente(
-                "EST-003", "100000003", "Valentina", "Perez",
-                "52000003", "Claudia", "Perez", "3003334455", "claudia.perez@example.com",
-                null, grado, "Madre"
-        );
-        crearEstudianteConAcudiente(
-                "EST-004", "100000004", "Juan", "Martinez",
-                "52000004", "Ricardo", "Martinez", "3004445566", "ricardo.martinez@example.com",
-                null, grado, "Padre"
-        );
-        crearEstudianteConAcudiente(
-                "EST-005", "100000005", "Isabella", "Torres",
-                "52000005", "Patricia", "Torres", "3005556677", "patricia.torres@example.com",
-                null, grado, "Madre"
-        );
 
         admin.setActivo(true);
     }

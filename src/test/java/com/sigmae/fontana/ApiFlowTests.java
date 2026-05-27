@@ -7,6 +7,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sigmae.fontana.entity.Acudiente;
+import com.sigmae.fontana.entity.Estudiante;
+import com.sigmae.fontana.entity.EstudianteAcudiente;
+import com.sigmae.fontana.entity.EstudianteAcudienteId;
+import com.sigmae.fontana.entity.enums.EstadoPermanencia;
+import com.sigmae.fontana.repository.AcudienteRepository;
+import com.sigmae.fontana.repository.EstudianteAcudienteRepository;
+import com.sigmae.fontana.repository.EstudianteRepository;
+import com.sigmae.fontana.repository.GradoRepository;
 import com.sigmae.fontana.repository.PuntoAccesoRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +39,18 @@ class ApiFlowTests {
 
     @Autowired
     private PuntoAccesoRepository puntoAccesoRepository;
+
+    @Autowired
+    private GradoRepository gradoRepository;
+
+    @Autowired
+    private EstudianteRepository estudianteRepository;
+
+    @Autowired
+    private AcudienteRepository acudienteRepository;
+
+    @Autowired
+    private EstudianteAcudienteRepository estudianteAcudienteRepository;
 
     @Test
     void adminCreaCatalogosYEstudiante() throws Exception {
@@ -166,6 +187,7 @@ class ApiFlowTests {
 
     @Test
     void talanqueraRegistraIngresoYDevuelveAcudienteNotificado() throws Exception {
+        crearTarjetaDePruebaEnTest();
         var token = login("porteria@sigmae.edu.co", "Porteria123*");
         var body = """
                 {
@@ -183,6 +205,41 @@ class ApiFlowTests {
                 .andExpect(jsonPath("$.estudiante").value("Mateo Rojas"))
                 .andExpect(jsonPath("$.acudientesNotificados[0].correo").value("andres.rojas@example.com"))
                 .andExpect(jsonPath("$.acudientesNotificados[0].correoSimuladoEnviado").value(true));
+    }
+
+    private void crearTarjetaDePruebaEnTest() {
+        if (estudianteRepository.existsByCodigoEstudiantil("EST-002")) {
+            return;
+        }
+
+        var grado = gradoRepository.findByNombre("5A").orElseThrow();
+        var estudiante = new Estudiante();
+        estudiante.setCodigoEstudiantil("EST-002");
+        estudiante.setDocumento("100000002");
+        estudiante.setNombres("Mateo");
+        estudiante.setApellidos("Rojas");
+        estudiante.setEstadoPermanencia(EstadoPermanencia.FUERA_DEL_PLANTEL);
+        estudiante.setGrado(grado);
+        estudianteRepository.save(estudiante);
+
+        var acudiente = new Acudiente();
+        acudiente.setDocumento("52000002");
+        acudiente.setNombres("Andres");
+        acudiente.setApellidos("Rojas");
+        acudiente.setTelefono("3002223344");
+        acudiente.setCorreo("andres.rojas@example.com");
+        acudienteRepository.save(acudiente);
+
+        var id = new EstudianteAcudienteId();
+        id.setEstudianteId(estudiante.getId());
+        id.setAcudienteId(acudiente.getId());
+        var relacion = new EstudianteAcudiente();
+        relacion.setId(id);
+        relacion.setEstudiante(estudiante);
+        relacion.setAcudiente(acudiente);
+        relacion.setParentesco("Padre");
+        relacion.setResponsablePrincipal(true);
+        estudianteAcudienteRepository.save(relacion);
     }
 
     private String login(String correo, String password) throws Exception {

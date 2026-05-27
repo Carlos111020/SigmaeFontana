@@ -3,15 +3,9 @@ const PORTERIA_LOGIN = {
     correo: "porteria@sigmae.edu.co",
     password: "Porteria123*"
 };
-const TEST_CARDS = [
-    { code: "EST-001", name: "Sofia Gomez" },
-    { code: "EST-002", name: "Mateo Rojas" },
-    { code: "EST-003", name: "Valentina Perez" },
-    { code: "EST-004", name: "Juan Martinez" },
-    { code: "EST-005", name: "Isabella Torres" }
-];
 
 let token = localStorage.getItem("sigmaeToken") || "";
+let testCards = [];
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
@@ -24,15 +18,26 @@ const lastEventTime = document.querySelector("#lastEventTime");
 const gateArm = document.querySelector("#gateArm");
 const studentMarker = document.querySelector("#studentMarker");
 
-function init() {
-    renderCards();
+async function init() {
+    await loadTestCards();
     refreshSession();
     loginButton.addEventListener("click", login);
     gateForm.addEventListener("submit", registerAccess);
 }
 
+async function loadTestCards() {
+    try {
+        const response = await fetch("/assets/test-cards.json");
+        testCards = await parseResponse(response);
+        renderCards();
+    } catch (error) {
+        testCards = [];
+        cardList.innerHTML = `<p class="hint">No fue posible cargar los carnets de prueba.</p>`;
+    }
+}
+
 function renderCards() {
-    cardList.innerHTML = TEST_CARDS.map(card => `
+    cardList.innerHTML = testCards.map(card => `
         <button class="test-card" type="button" data-code="${card.code}">
             <strong>${card.code}</strong>
             <span>${card.name}</span>
