@@ -15,9 +15,10 @@ Este flujo esta pensado para integrantes con poca experiencia en GitHub y evita 
 
 1. Cada integrante trabaja desde su propia cuenta de GitHub.
 2. Nadie hace commits usando el nombre o correo de otra persona.
-3. Cada Pull Request debe tener una descripcion corta: que cambio, como se probo y que endpoint afecta.
-4. Antes de aprobar un Pull Request, otro integrante debe leerlo y ejecutar al menos una prueba.
-5. Si alguien no programa una parte grande, puede aportar de forma real con pruebas en Postman, documentacion tecnica, screenshots de Swagger o revision de codigo.
+3. El correo de autor del commit debe estar verificado en GitHub o usar el correo `noreply` de la cuenta; si no, el commit no cuenta en el perfil.
+4. Cada Pull Request debe tener una descripcion corta: que cambio, como se probo y que endpoint afecta.
+5. Antes de aprobar un Pull Request, otro integrante debe leerlo y ejecutar al menos una prueba.
+6. Si alguien no programa una parte grande, puede aportar de forma real con pruebas en Postman, documentacion tecnica, screenshots de Swagger o revision de codigo.
 
 ## Comandos basicos
 
