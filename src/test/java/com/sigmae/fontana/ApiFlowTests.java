@@ -1,7 +1,9 @@
 package com.sigmae.fontana;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -240,6 +242,90 @@ class ApiFlowTests {
                 .andExpect(jsonPath("$.operacion").value("SALIDA"))
                 .andExpect(jsonPath("$.estadoPermanencia").value("FUERA_DEL_PLANTEL"))
                 .andExpect(jsonPath("$.acudientesNotificados[0].correo").value("claudia.perez@example.com"));
+    }
+
+    @Test
+    void adminGestionaRelacionEstudianteAcudiente() throws Exception {
+        var token = login("admin@sigmae.edu.co", "Admin123*");
+        var gradoId = gradoRepository.findByNombre("5A").orElseThrow().getId();
+
+        var estudianteBody = """
+                {
+                  "codigoEstudiantil": "EST-REL-900",
+                  "documento": "1099000999",
+                  "nombres": "Sofia",
+                  "apellidos": "Mendoza",
+                  "gradoId": %d
+                }
+                """.formatted(gradoId);
+        var estudianteResponse = mockMvc.perform(post("/api/v1/estudiantes")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estudianteBody))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var estudianteId = objectMapper.readTree(estudianteResponse.getResponse().getContentAsString()).get("id").asLong();
+
+        var acudienteBody = """
+                {
+                  "documento": "5299000999",
+                  "nombres": "Rosa",
+                  "apellidos": "Mendoza",
+                  "telefono": "3009900999",
+                  "correo": "rosa.mendoza.rel@example.com",
+                  "usuarioId": null
+                }
+                """;
+        var acudienteResponse = mockMvc.perform(post("/api/v1/acudientes")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(acudienteBody))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var acudienteId = objectMapper.readTree(acudienteResponse.getResponse().getContentAsString()).get("id").asLong();
+
+        var relacionBody = """
+                {
+                  "acudienteId": %d,
+                  "parentesco": "Madre",
+                  "responsablePrincipal": true
+                }
+                """.formatted(acudienteId);
+        mockMvc.perform(post("/api/v1/estudiantes/{id}/acudientes", estudianteId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(relacionBody))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/estudiantes/{id}/acudientes", estudianteId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].parentesco").value("Madre"))
+                .andExpect(jsonPath("$[0].acudiente.correo").value("rosa.mendoza.rel@example.com"));
+
+        var relacionActualizadaBody = """
+                {
+                  "acudienteId": %d,
+                  "parentesco": "Padre",
+                  "responsablePrincipal": false
+                }
+                """.formatted(acudienteId);
+        mockMvc.perform(put("/api/v1/estudiantes/{id}/acudientes/{acudienteId}", estudianteId, acudienteId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(relacionActualizadaBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentesco").value("Padre"))
+                .andExpect(jsonPath("$.responsablePrincipal").value(false));
+
+        mockMvc.perform(delete("/api/v1/estudiantes/{id}/acudientes/{acudienteId}", estudianteId, acudienteId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/estudiantes/{id}/acudientes", estudianteId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     private void crearTarjetaDePruebaEnTest() {

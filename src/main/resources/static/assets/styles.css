@@ -489,6 +489,40 @@ select {
     display: block;
 }
 
+.admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-tab {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    color: var(--muted);
+    background: transparent;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.admin-tab.active {
+    color: var(--ink);
+    border-color: var(--line);
+    background: #fbfcfd;
+}
+
+.admin-view {
+    display: none;
+}
+
+.admin-view.active {
+    display: block;
+}
+
 .admin-layout {
     display: grid;
     grid-template-columns: 360px minmax(0, 1fr);
@@ -525,6 +559,14 @@ select {
     font-size: 0.98rem;
 }
 
+.form-section-title {
+    margin: 14px 0 10px;
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -542,6 +584,17 @@ select {
 
 .form-grid .wide-field {
     grid-column: 1 / -1;
+}
+
+.check-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.check-field input {
+    width: auto;
 }
 
 .student-form select,
@@ -583,6 +636,14 @@ select {
     background: #ffffff;
 }
 
+.student-card-rich {
+    grid-template-columns: minmax(190px, 1fr) minmax(220px, 1fr) auto;
+}
+
+.user-card {
+    grid-template-columns: minmax(190px, 1.2fr) minmax(100px, 0.6fr) minmax(90px, 0.5fr) auto;
+}
+
 .student-card.inactive {
     opacity: 0.68;
     background: #f0f4f6;
@@ -590,15 +651,25 @@ select {
 
 .student-main strong,
 .student-main span,
+.student-main small,
 .student-meta span,
-.student-meta strong {
+.student-meta strong,
+.student-meta small {
     display: block;
 }
 
 .student-main span,
+.student-main small,
 .student-meta span {
     color: var(--muted);
     font-size: 0.78rem;
+}
+
+.student-meta small {
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .student-meta span {
@@ -749,6 +820,11 @@ select {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .student-card-rich,
+    .user-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .student-actions {
         justify-content: flex-start;
     }
@@ -786,6 +862,8 @@ select {
 
     .form-grid,
     .student-card,
+    .student-card-rich,
+    .user-card,
     .student-toolbar {
         grid-template-columns: 1fr;
     }
