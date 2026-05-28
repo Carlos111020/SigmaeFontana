@@ -165,7 +165,7 @@ async function registerAccess(event) {
 
     if (!canUseGate()) {
         denyGate(code);
-        renderError("Este perfil no puede registrar ingresos. Selecciona Porteria o Coordinador.");
+        renderError("Este perfil no puede registrar ingresos ni salidas. Selecciona Porteria o Coordinador.");
         return;
     }
 
@@ -174,15 +174,12 @@ async function registerAccess(event) {
     const mode = getAccessMode();
 
     try {
-        const endpoint = mode === "ingresos" ? `${API_BASE}/talanquera/ingresos` : `${API_BASE}/registros-acceso/salidas`;
-        const payload = mode === "ingresos"
-                ? { codigoTarjeta: code, observacion: "Ingreso registrado desde simulador web" }
-                : {
-                    identificadorEstudiante: code,
-                    puntoAccesoId: 1,
-                    observacion: "Salida registrada desde simulador web",
-                    crearNovedadSalidaAnticipada: false
-                };
+        const endpoint = mode === "ingresos" ? `${API_BASE}/talanquera/ingresos` : `${API_BASE}/talanquera/salidas`;
+        const payload = {
+            codigoTarjeta: code,
+            observacion: `${mode === "ingresos" ? "Ingreso" : "Salida"} registrada desde simulador web`,
+            crearNovedadSalidaAnticipada: false
+        };
         const response = await fetch(endpoint, {
             method: "POST",
             headers: {
@@ -194,21 +191,13 @@ async function registerAccess(event) {
         const data = await parseResponse(response);
         const normalized = normalizeAccessResponse(data, code, mode);
         openGate(normalized.codigoTarjeta);
-        renderSuccess(normalized, false);
-        notifyGuardian(normalized, false);
+        renderSuccess(normalized);
+        notifyGuardian(normalized);
     } catch (error) {
         if (error.status === 401 || error.status === 403) {
             clearSession();
             denyGate(code);
             renderError("La sesion expiro o el rol no tiene permisos.");
-            return;
-        }
-
-        const demoData = buildDemoAccess(code, mode);
-        if (demoData) {
-            openGate(code);
-            renderSuccess(demoData, true);
-            notifyGuardian(demoData, true);
             return;
         }
 
@@ -232,73 +221,16 @@ async function parseResponse(response) {
     return data;
 }
 
-function buildDemoAccess(code, mode = "ingresos") {
-    const card = testCards.find(item => item.code === code);
-    if (!card) {
-        return null;
-    }
-
-    const now = new Date().toISOString();
-    const [guardianNames, guardianLastName] = splitName(card.guardian.name);
-    return {
-        registroId: null,
-        fechaHora: now,
-        codigoTarjeta: card.code,
-        estudianteId: null,
-        estudiante: card.name,
-        grado: card.grade,
-        estadoPermanencia: mode === "ingresos" ? "DENTRO_DEL_PLANTEL" : "FUERA_DEL_PLANTEL",
-        puntoAcceso: "Porteria principal",
-        mensajeCorreo: `Correo demo enviado a ${card.guardian.email} con hora de ${mode === "ingresos" ? "llegada" : "salida"}: ${formatDateTime(now)}`,
-        operacion: mode === "ingresos" ? "INGRESO" : "SALIDA",
-        acudientesNotificados: [
-            {
-                id: null,
-                nombres: guardianNames,
-                apellidos: guardianLastName,
-                parentesco: card.guardian.relationship,
-                correo: card.guardian.email,
-                correoSimuladoEnviado: true
-            }
-        ]
-    };
-}
-
 function normalizeAccessResponse(data, code, mode) {
-    if (data.codigoTarjeta) {
-        return {
-            ...data,
-            operacion: "INGRESO"
-        };
-    }
-
-    const card = testCards.find(item => item.code === code);
-    const [guardianNames, guardianLastName] = splitName(card?.guardian?.name || "Acudiente");
     return {
-        registroId: data.id,
-        fechaHora: data.fechaHora,
-        codigoTarjeta: code,
-        estudianteId: data.estudianteId,
-        estudiante: data.estudiante,
-        grado: card?.grade || "No registrado",
-        estadoPermanencia: data.estadoPermanencia,
-        puntoAcceso: data.puntoAcceso,
-        mensajeCorreo: `Correo simulado enviado al acudiente con hora de salida: ${formatDateTime(data.fechaHora)}`,
-        operacion: mode === "ingresos" ? "INGRESO" : "SALIDA",
-        acudientesNotificados: [
-            {
-                id: null,
-                nombres: guardianNames,
-                apellidos: guardianLastName,
-                parentesco: card?.guardian?.relationship || "Acudiente",
-                correo: card?.guardian?.email || "correo.acudiente@example.com",
-                correoSimuladoEnviado: true
-            }
-        ]
+        ...data,
+        codigoTarjeta: data.codigoTarjeta || code,
+        operacion: data.operacion || (mode === "ingresos" ? "INGRESO" : "SALIDA"),
+        acudientesNotificados: data.acudientesNotificados || []
     };
 }
 
-function renderSuccess(data, isDemo) {
+function renderSuccess(data) {
     const displayData = applyCardOverrides(data);
     lastEventTime.textContent = formatDateTime(displayData.fechaHora);
     const guardians = displayData.acudientesNotificados.map(acudiente => `
@@ -311,7 +243,6 @@ function renderSuccess(data, isDemo) {
     resultBox.className = "result-card success";
     resultBox.innerHTML = `
         <div class="result-title">${displayData.operacion === "SALIDA" ? "Salida registrada" : "Ingreso autorizado"}</div>
-        ${isDemo ? `<p class="demo-note">Registro demo desde archivo de prueba. El backend queda intacto si el estudiante no existe en BD.</p>` : ""}
         <div class="data-list">
             <div class="data-row"><span>Estudiante</span><strong>${displayData.estudiante}</strong></div>
             <div class="data-row"><span>Carnet</span><strong>${displayData.codigoTarjeta}</strong></div>
@@ -335,13 +266,12 @@ function applyCardOverrides(data) {
     };
 }
 
-function notifyGuardian(data, isDemo) {
+function notifyGuardian(data) {
     const displayData = applyCardOverrides(data);
     const guardian = displayData.acudientesNotificados[0];
     const recipient = guardian ? guardian.correo : "acudiente";
-    const mode = isDemo ? "Correo demo enviado" : "Correo enviado";
-    const operation = displayData.operacion === "SALIDA" ? "salida" : "ingreso";
-    showToast(`${mode} a ${recipient} por el ${operation} de ${displayData.estudiante}.`);
+    const operation = displayData.operacion === "SALIDA" ? "la salida" : "el ingreso";
+    showToast(`Correo enviado a ${recipient} por ${operation} de ${displayData.estudiante}.`);
 }
 
 async function loadDashboard() {
@@ -546,14 +476,6 @@ function readStoredUser() {
 
 function roleLabel(role) {
     return ROLE_LOGINS[role]?.label || role || "Usuario";
-}
-
-function splitName(fullName) {
-    const parts = fullName.split(" ");
-    if (parts.length === 1) {
-        return [fullName, ""];
-    }
-    return [parts.slice(0, -1).join(" "), parts.at(-1)];
 }
 
 function formatDateTime(value) {

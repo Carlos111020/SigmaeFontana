@@ -435,15 +435,6 @@ select {
     background: #eef8f6;
 }
 
-.demo-note {
-    margin-bottom: 12px;
-    padding: 10px;
-    border-radius: 8px;
-    color: #5c4105;
-    background: #fff4ce;
-    font-size: 0.86rem;
-}
-
 .toast {
     position: fixed;
     right: 24px;

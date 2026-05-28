@@ -58,8 +58,8 @@ class ApiFlowTests {
 
         var gradoBody = """
                 {
-                  "nombre": "6A",
-                  "nivel": "Basica secundaria"
+                  "nombre": "11A",
+                  "nivel": "Media"
                 }
                 """;
         var gradoResponse = mockMvc.perform(post("/api/v1/grados")
@@ -68,7 +68,7 @@ class ApiFlowTests {
                         .content(gradoBody))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.nombre").value("6A"))
+                .andExpect(jsonPath("$.nombre").value("11A"))
                 .andReturn();
         var gradoId = objectMapper.readTree(gradoResponse.getResponse().getContentAsString()).get("id").asLong();
 
@@ -187,7 +187,6 @@ class ApiFlowTests {
 
     @Test
     void talanqueraRegistraIngresoYDevuelveAcudienteNotificado() throws Exception {
-        crearTarjetaDePruebaEnTest();
         var token = login("porteria@sigmae.edu.co", "Porteria123*");
         var body = """
                 {
@@ -202,9 +201,45 @@ class ApiFlowTests {
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.codigoTarjeta").value("EST-002"))
+                .andExpect(jsonPath("$.operacion").value("INGRESO"))
                 .andExpect(jsonPath("$.estudiante").value("Mateo Rojas"))
                 .andExpect(jsonPath("$.acudientesNotificados[0].correo").value("andres.rojas@example.com"))
                 .andExpect(jsonPath("$.acudientesNotificados[0].correoSimuladoEnviado").value(true));
+    }
+
+    @Test
+    void talanqueraRegistraSalidaYDevuelveAcudienteNotificado() throws Exception {
+        var token = login("porteria@sigmae.edu.co", "Porteria123*");
+        var ingreso = """
+                {
+                  "codigoTarjeta": "EST-003",
+                  "observacion": "Ingreso previo desde simulador web"
+                }
+                """;
+        var salida = """
+                {
+                  "codigoTarjeta": "EST-003",
+                  "observacion": "Salida desde simulador web",
+                  "crearNovedadSalidaAnticipada": false
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/talanquera/ingresos")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(ingreso))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.operacion").value("INGRESO"));
+
+        mockMvc.perform(post("/api/v1/talanquera/salidas")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(salida))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.codigoTarjeta").value("EST-003"))
+                .andExpect(jsonPath("$.operacion").value("SALIDA"))
+                .andExpect(jsonPath("$.estadoPermanencia").value("FUERA_DEL_PLANTEL"))
+                .andExpect(jsonPath("$.acudientesNotificados[0].correo").value("claudia.perez@example.com"));
     }
 
     private void crearTarjetaDePruebaEnTest() {

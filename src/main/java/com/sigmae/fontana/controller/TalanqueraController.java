@@ -1,7 +1,7 @@
 package com.sigmae.fontana.controller;
 
-import com.sigmae.fontana.dto.talanquera.TalanqueraIngresoRequest;
-import com.sigmae.fontana.dto.talanquera.TalanqueraIngresoResponse;
+import com.sigmae.fontana.dto.talanquera.TalanqueraAccesoRequest;
+import com.sigmae.fontana.dto.talanquera.TalanqueraAccesoResponse;
 import com.sigmae.fontana.service.TalanqueraService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +23,21 @@ public class TalanqueraController {
 
     @PostMapping("/ingresos")
     @PreAuthorize("hasAnyRole('PORTERIA','COORDINADOR')")
-    public ResponseEntity<TalanqueraIngresoResponse> registrarIngreso(
-            @Valid @RequestBody TalanqueraIngresoRequest request,
+    public ResponseEntity<TalanqueraAccesoResponse> registrarIngreso(
+            @Valid @RequestBody TalanqueraAccesoRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(talanqueraService.registrarIngreso(request, authentication.getName()));
+    }
+
+    @PostMapping("/salidas")
+    @PreAuthorize("hasAnyRole('PORTERIA','COORDINADOR')")
+    public ResponseEntity<TalanqueraAccesoResponse> registrarSalida(
+            @Valid @RequestBody TalanqueraAccesoRequest request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(talanqueraService.registrarSalida(request, authentication.getName()));
     }
 }
