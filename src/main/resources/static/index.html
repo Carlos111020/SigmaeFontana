@@ -42,7 +42,6 @@
                 <form id="studentForm" class="student-form">
                     <input id="studentId" type="hidden">
                     <input id="guardianId" type="hidden">
-                    <input id="guardianUserId" type="hidden">
                     <div class="form-heading">
                         <h3 id="studentFormTitle">Nuevo estudiante</h3>
                         <button id="clearStudentFormButton" class="secondary-button compact-button" type="button">Limpiar</button>
@@ -95,6 +94,10 @@
                         <label>
                             Parentesco
                             <input id="guardianRelationship" autocomplete="off" maxlength="40" required placeholder="Madre">
+                        </label>
+                        <label class="wide-field">
+                            Usuario de acceso
+                            <select id="guardianUserSelect"></select>
                         </label>
                         <label class="check-field wide-field">
                             <input id="guardianMain" type="checkbox" checked>

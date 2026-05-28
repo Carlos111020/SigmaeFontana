@@ -32,6 +32,7 @@ let testCards = [];
 let adminStudents = [];
 let adminGrades = [];
 let adminGuardians = [];
+let adminGuardianUsers = [];
 let adminStudentRelations = new Map();
 let adminUsers = [];
 let activeAdminView = "students";
@@ -66,7 +67,6 @@ const studentForm = document.querySelector("#studentForm");
 const studentFormTitle = document.querySelector("#studentFormTitle");
 const studentId = document.querySelector("#studentId");
 const guardianId = document.querySelector("#guardianId");
-const guardianUserId = document.querySelector("#guardianUserId");
 const studentCode = document.querySelector("#studentCode");
 const studentDocument = document.querySelector("#studentDocument");
 const studentNames = document.querySelector("#studentNames");
@@ -78,6 +78,7 @@ const guardianNames = document.querySelector("#guardianNames");
 const guardianLastNames = document.querySelector("#guardianLastNames");
 const guardianEmail = document.querySelector("#guardianEmail");
 const guardianRelationship = document.querySelector("#guardianRelationship");
+const guardianUserSelect = document.querySelector("#guardianUserSelect");
 const guardianMain = document.querySelector("#guardianMain");
 const saveStudentButton = document.querySelector("#saveStudentButton");
 const clearStudentFormButton = document.querySelector("#clearStudentFormButton");
@@ -402,7 +403,7 @@ async function loadAdminPanel() {
     adminFeedback.textContent = "Cargando gestion administrativa...";
     userFeedback.textContent = "Cargando usuarios...";
     try {
-        await Promise.all([loadGrades(), loadGuardians(), loadStudents(), loadUsers()]);
+        await Promise.all([loadGrades(), loadGuardians(), loadGuardianUsers(), loadStudents(), loadUsers()]);
         adminFeedback.textContent = "Gestion lista.";
         userFeedback.textContent = "Gestion lista.";
     } catch (error) {
@@ -431,6 +432,12 @@ async function loadGuardians() {
     adminGuardians = await apiGet("/acudientes?activo=true");
 }
 
+async function loadGuardianUsers(selectedId = guardianUserSelect.value) {
+    const activeUsers = await apiGet("/usuarios?activo=true");
+    adminGuardianUsers = activeUsers.filter(user => user.rol === "ACUDIENTE");
+    renderGuardianUserOptions(selectedId);
+}
+
 async function loadStudents() {
     const status = studentStatusFilter.value;
     const query = status === "" ? "" : `?activo=${status}`;
@@ -456,6 +463,20 @@ function renderGradeOptions() {
     `).join("");
 }
 
+function renderGuardianUserOptions(selectedId = "") {
+    const normalizedSelectedId = selectedId ? String(selectedId) : "";
+    const linkedUserMissing = normalizedSelectedId
+            && !adminGuardianUsers.some(user => String(user.id) === normalizedSelectedId);
+    guardianUserSelect.innerHTML = `
+        <option value="">Sin usuario de acceso</option>
+        ${adminGuardianUsers.map(user => `
+            <option value="${user.id}">${escapeHtml(user.nombres)} ${escapeHtml(user.apellidos)} - ${escapeHtml(user.correo)}</option>
+        `).join("")}
+        ${linkedUserMissing ? `<option value="${escapeHtml(normalizedSelectedId)}">Usuario actual no disponible</option>` : ""}
+    `;
+    guardianUserSelect.value = normalizedSelectedId;
+}
+
 async function saveStudent(event) {
     event.preventDefault();
 
@@ -477,7 +498,7 @@ async function saveStudent(event) {
         apellidos: guardianLastNames.value.trim(),
         telefono: guardianPhone.value.trim(),
         correo: guardianEmail.value.trim(),
-        usuarioId: guardianUserId.value ? Number(guardianUserId.value) : null
+        usuarioId: guardianUserSelect.value ? Number(guardianUserSelect.value) : null
     };
     const editingId = studentId.value;
     const editingGuardianId = guardianId.value;
@@ -606,7 +627,6 @@ async function editStudent(id) {
     const guardian = relation?.acudiente;
     studentId.value = student.id;
     guardianId.value = guardian?.id || "";
-    guardianUserId.value = guardian?.usuarioId || "";
     studentCode.value = student.codigoEstudiantil;
     studentDocument.value = student.documento;
     studentNames.value = student.nombres;
@@ -618,6 +638,7 @@ async function editStudent(id) {
     guardianLastNames.value = guardian?.apellidos || "";
     guardianEmail.value = guardian?.correo || "";
     guardianRelationship.value = relation?.parentesco || "";
+    renderGuardianUserOptions(guardian?.usuarioId || "");
     guardianMain.checked = relation?.responsablePrincipal ?? true;
     studentFormTitle.textContent = "Editar estudiante";
     saveStudentButton.textContent = "Actualizar estudiante";
@@ -664,10 +685,10 @@ function resetStudentForm() {
     studentForm.reset();
     studentId.value = "";
     guardianId.value = "";
-    guardianUserId.value = "";
     if (adminGrades.length > 0) {
         studentGradeId.value = adminGrades[0].id;
     }
+    renderGuardianUserOptions("");
     guardianMain.checked = true;
     studentFormTitle.textContent = "Nuevo estudiante";
     saveStudentButton.textContent = "Guardar estudiante";
@@ -734,7 +755,7 @@ async function saveUser(event) {
                 : `Usuario creado: ${saved.correo}.`;
         showToast(userFeedback.textContent);
         resetUserForm();
-        await loadUsers();
+        await Promise.all([loadUsers(), loadGuardianUsers()]);
     } catch (error) {
         userFeedback.textContent = error.message;
     } finally {
@@ -835,7 +856,7 @@ async function deleteUser(id) {
         if (userId.value === String(id)) {
             resetUserForm();
         }
-        await loadUsers();
+        await Promise.all([loadUsers(), loadGuardianUsers()]);
     } catch (error) {
         userFeedback.textContent = error.message;
     } finally {
