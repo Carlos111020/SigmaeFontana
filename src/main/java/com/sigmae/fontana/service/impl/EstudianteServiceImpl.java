@@ -1,12 +1,17 @@
 package com.sigmae.fontana.service.impl;
 
+import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteResponse;
+import com.sigmae.fontana.entity.EstudianteAcudiente;
+import com.sigmae.fontana.entity.EstudianteAcudienteId;
 import com.sigmae.fontana.entity.Estudiante;
 import com.sigmae.fontana.entity.enums.EstadoPermanencia;
 import com.sigmae.fontana.exception.BusinessException;
 import com.sigmae.fontana.exception.ResourceNotFoundException;
 import com.sigmae.fontana.mapper.EstudianteMapper;
+import com.sigmae.fontana.repository.AcudienteRepository;
+import com.sigmae.fontana.repository.EstudianteAcudienteRepository;
 import com.sigmae.fontana.repository.EstudianteRepository;
 import com.sigmae.fontana.repository.GradoRepository;
 import com.sigmae.fontana.service.EstudianteService;
@@ -23,6 +28,8 @@ public class EstudianteServiceImpl implements EstudianteService {
 
     private final EstudianteRepository estudianteRepository;
     private final GradoRepository gradoRepository;
+    private final AcudienteRepository acudienteRepository;
+    private final EstudianteAcudienteRepository estudianteAcudienteRepository;
     private final EstudianteMapper estudianteMapper;
 
     @Override
@@ -104,6 +111,31 @@ public class EstudianteServiceImpl implements EstudianteService {
                 .filter(estudiante -> !StringUtils.hasText(texto) || coincide(estudiante, texto))
                 .map(estudianteMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void asociarAcudiente(Long estudianteId, EstudianteAcudienteRequest request) {
+        var estudiante = estudianteRepository.findById(estudianteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado"));
+        var acudiente = acudienteRepository.findById(request.acudienteId())
+                .filter(a -> a.isActivo())
+                .orElseThrow(() -> new ResourceNotFoundException("Acudiente no encontrado o inactivo"));
+
+        var id = new EstudianteAcudienteId();
+        id.setEstudianteId(estudiante.getId());
+        id.setAcudienteId(acudiente.getId());
+        if (estudianteAcudienteRepository.existsById(id)) {
+            throw new BusinessException("El acudiente ya esta asociado al estudiante", HttpStatus.CONFLICT);
+        }
+
+        var relacion = new EstudianteAcudiente();
+        relacion.setId(id);
+        relacion.setEstudiante(estudiante);
+        relacion.setAcudiente(acudiente);
+        relacion.setParentesco(request.parentesco());
+        relacion.setResponsablePrincipal(request.responsablePrincipal());
+        estudianteAcudienteRepository.save(relacion);
     }
 
     private void validarUnicos(String codigoEstudiantil, String documento) {

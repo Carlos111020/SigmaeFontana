@@ -1,0 +1,589 @@
+{
+  "info": {
+    "_postman_id": "7fe17371-0cd7-4cc7-9a87-5d79188c1001",
+    "name": "SIGMAE Fontana API",
+    "description": "Coleccion de sustentacion para validar autenticacion, catalogos, estudiantes, acudientes, talanquera, novedades y dashboard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('runSuffix')) {",
+          "  const suffix = Date.now().toString();",
+          "  pm.environment.set('runSuffix', suffix);",
+          "  pm.environment.set('codigoEstudiante', `EST-PM-${suffix}`);",
+          "  pm.environment.set('documentoEstudiante', `9${suffix}`);",
+          "  pm.environment.set('documentoAcudiente', `8${suffix}`);",
+          "  pm.environment.set('correoAcudiente', `acudiente.pm.${suffix}@example.com`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Autenticacion",
+      "item": [
+        {
+          "name": "Login administrador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login administrador OK', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.environment.set('adminToken', data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@sigmae.edu.co\",\n  \"password\": \"Admin123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login porteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login porteria OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('porteriaToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"porteria@sigmae.edu.co\",\n  \"password\": \"Porteria123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login coordinador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login coordinador OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('coordinadorToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"coordinador@sigmae.edu.co\",\n  \"password\": \"Coord123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login acudiente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login acudiente OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('acudienteToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"acudiente@sigmae.edu.co\",\n  \"password\": \"Acudiente123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gestion academica",
+      "item": [
+        {
+          "name": "Listar grados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lista grados OK', () => pm.response.to.have.status(200));",
+                  "const grados = pm.response.json();",
+                  "const grado = grados.find(item => item.nombre === '6A') || grados[0];",
+                  "pm.environment.set('gradoId', grado.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/grados?activo=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "grados"
+              ],
+              "query": [
+                {
+                  "key": "activo",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear estudiante de sustentacion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante creado', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('estudianteId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoEstudiantil\": \"{{codigoEstudiante}}\",\n  \"documento\": \"{{documentoEstudiante}}\",\n  \"nombres\": \"Prueba\",\n  \"apellidos\": \"Postman\",\n  \"gradoId\": {{gradoId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/estudiantes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear acudiente de sustentacion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('acudiente creado', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('acudienteId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"{{documentoAcudiente}}\",\n  \"nombres\": \"Acudiente\",\n  \"apellidos\": \"Postman\",\n  \"telefono\": \"3000000000\",\n  \"correo\": \"{{correoAcudiente}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/acudientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "acudientes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asociar acudiente a estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('asociacion OK', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acudienteId\": {{acudienteId}},\n  \"parentesco\": \"Madre\",\n  \"responsablePrincipal\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/estudiantes/{{estudianteId}}/acudientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes",
+                "{{estudianteId}}",
+                "acudientes"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Talanquera",
+      "item": [
+        {
+          "name": "Registrar ingreso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ingreso OK', () => pm.response.to.have.status(201));",
+                  "pm.test('operacion ingreso', () => pm.expect(pm.response.json().operacion).to.eql('INGRESO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{porteriaToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTarjeta\": \"{{codigoEstudiante}}\",\n  \"observacion\": \"Ingreso desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/talanquera/ingresos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "talanquera",
+                "ingresos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar salida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('salida OK', () => pm.response.to.have.status(201));",
+                  "pm.test('operacion salida', () => pm.expect(pm.response.json().operacion).to.eql('SALIDA'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{porteriaToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTarjeta\": \"{{codigoEstudiante}}\",\n  \"observacion\": \"Salida desde Postman\",\n  \"crearNovedadSalidaAnticipada\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/talanquera/salidas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "talanquera",
+                "salidas"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seguimiento",
+      "item": [
+        {
+          "name": "Crear novedad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('novedad creada', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coordinadorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoNovedad\": \"OBSERVACION_SEGURIDAD\",\n  \"descripcion\": \"Novedad creada durante sustentacion\",\n  \"estudianteId\": {{estudianteId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/novedades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "novedades"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('dashboard OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coordinadorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/metricas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "metricas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar estudiante del acudiente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('consulta acudiente OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{acudienteToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/acudientes/me/estudiantes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "acudientes",
+                "me",
+                "estudiantes"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

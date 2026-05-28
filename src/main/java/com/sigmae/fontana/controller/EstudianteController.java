@@ -1,5 +1,6 @@
 package com.sigmae.fontana.controller;
 
+import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteResponse;
 import com.sigmae.fontana.service.EstudianteService;
@@ -69,6 +70,16 @@ public class EstudianteController {
             @RequestParam(required = false) String texto
     ) {
         return ResponseEntity.ok(estudianteService.presentes(gradoId, texto));
+    }
+
+    @PostMapping("/{id}/acudientes")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> asociarAcudiente(
+            @PathVariable Long id,
+            @Valid @RequestBody EstudianteAcudienteRequest request
+    ) {
+        estudianteService.asociarAcudiente(id, request);
+        return ResponseEntity.noContent().build();
     }
 
     private URI location(Long id) {

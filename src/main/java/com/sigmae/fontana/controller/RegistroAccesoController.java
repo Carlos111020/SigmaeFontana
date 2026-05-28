@@ -2,8 +2,10 @@ package com.sigmae.fontana.controller;
 
 import com.sigmae.fontana.dto.registro.RegistroAccesoRequest;
 import com.sigmae.fontana.dto.registro.RegistroAccesoResponse;
+import com.sigmae.fontana.entity.enums.TipoRegistro;
 import com.sigmae.fontana.service.RegistroAccesoService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,6 +27,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class RegistroAccesoController {
 
     private final RegistroAccesoService registroAccesoService;
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','COORDINADOR')")
+    public ResponseEntity<Page<RegistroAccesoResponse>> filtrar(
+            @RequestParam(required = false) Long estudianteId,
+            @RequestParam(required = false) LocalDate fechaDesde,
+            @RequestParam(required = false) LocalDate fechaHasta,
+            @RequestParam(required = false) TipoRegistro tipoRegistro,
+            @RequestParam(required = false) Long puntoAccesoId,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(registroAccesoService.filtrar(
+                estudianteId,
+                fechaDesde,
+                fechaHasta,
+                tipoRegistro,
+                puntoAccesoId,
+                pageable
+        ));
+    }
 
     @PostMapping("/ingresos")
     @PreAuthorize("hasAnyRole('PORTERIA','COORDINADOR')")

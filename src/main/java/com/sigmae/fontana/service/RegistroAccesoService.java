@@ -2,6 +2,8 @@ package com.sigmae.fontana.service;
 
 import com.sigmae.fontana.dto.registro.RegistroAccesoRequest;
 import com.sigmae.fontana.dto.registro.RegistroAccesoResponse;
+import com.sigmae.fontana.entity.enums.TipoRegistro;
+import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -12,4 +14,13 @@ public interface RegistroAccesoService {
     RegistroAccesoResponse registrarSalida(RegistroAccesoRequest request, String correoUsuario);
 
     Page<RegistroAccesoResponse> historial(Long estudianteId, Pageable pageable);
+
+    Page<RegistroAccesoResponse> filtrar(
+            Long estudianteId,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            TipoRegistro tipoRegistro,
+            Long puntoAccesoId,
+            Pageable pageable
+    );
 }
