@@ -90,7 +90,7 @@ Ese script prueba el flujo completo: login, creacion de estudiante, creacion de 
 
 ## Datos Semilla
 
-Con una base vacia y `APP_SEED_ENABLED=true`, la aplicacion crea usuarios, grados, punto de acceso, jornada y 5 estudiantes de prueba que coinciden con los carnets del frontend.
+Con una base vacia y `APP_SEED_ENABLED=true`, la aplicacion crea usuarios, grados, punto de acceso, jornada y 5 estudiantes de prueba que coinciden con los carnets del frontend. Ese valor viene desactivado por defecto y solo se enciende cuando necesitas datos de demostracion.
 
 Usuarios:
 

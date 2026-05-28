@@ -27,7 +27,7 @@ Esta guia resume controles minimos para ejecutar SIGMAE Fontana sin exponer cred
 
 - Usar HTTPS delante de la API en ambientes compartidos o productivos.
 - Restringir el acceso a PostgreSQL por red, usuario y contrasena.
-- Desactivar datos semilla con `APP_SEED_ENABLED=false` en produccion.
+- Mantener `APP_SEED_ENABLED=false` por defecto y activarlo solo en ambientes de prueba o demostracion.
 - Revisar logs antes de compartirlos para evitar exponer tokens, correos o documentos.
 
 ## Checklist antes de publicar

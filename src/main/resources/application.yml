@@ -23,7 +23,7 @@ app:
     secret: ${APP_JWT_SECRET:SIGMAE_FONTANA_SECRET_KEY_FOR_JWT_2026_MINIMUM_256_BITS}
     expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:480}
   seed:
-    enabled: ${APP_SEED_ENABLED:true}
+    enabled: ${APP_SEED_ENABLED:false}
 
 springdoc:
   swagger-ui:
