@@ -27,6 +27,60 @@
 
     <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>
 
+    <section id="adminPanel" class="admin-panel" aria-label="Gestion administrador">
+        <div class="panel-heading">
+            <h2>Gestion estudiantes</h2>
+            <button id="refreshStudentsButton" class="secondary-button" type="button">Actualizar</button>
+        </div>
+        <div class="admin-layout">
+            <form id="studentForm" class="student-form">
+                <input id="studentId" type="hidden">
+                <div class="form-heading">
+                    <h3 id="studentFormTitle">Nuevo estudiante</h3>
+                    <button id="clearStudentFormButton" class="secondary-button compact-button" type="button">Limpiar</button>
+                </div>
+                <div class="form-grid">
+                    <label>
+                        Codigo
+                        <input id="studentCode" autocomplete="off" maxlength="30" required placeholder="EST-006">
+                    </label>
+                    <label>
+                        Documento
+                        <input id="studentDocument" autocomplete="off" maxlength="30" required placeholder="100000006">
+                    </label>
+                    <label>
+                        Nombres
+                        <input id="studentNames" autocomplete="off" maxlength="80" required placeholder="Nombre">
+                    </label>
+                    <label>
+                        Apellidos
+                        <input id="studentLastNames" autocomplete="off" maxlength="80" required placeholder="Apellido">
+                    </label>
+                    <label class="wide-field">
+                        Grado
+                        <select id="studentGradeId" required></select>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button id="saveStudentButton" class="primary-button" type="submit">Guardar estudiante</button>
+                </div>
+                <p id="adminFeedback" class="hint"></p>
+            </form>
+
+            <section class="student-list-panel" aria-label="Listado estudiantes">
+                <div class="student-toolbar">
+                    <select id="studentStatusFilter" aria-label="Filtro de estado">
+                        <option value="true">Activos</option>
+                        <option value="">Todos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
+                    <input id="studentSearch" autocomplete="off" placeholder="Buscar por codigo, nombre o documento">
+                </div>
+                <div id="studentList" class="student-list"></div>
+            </section>
+        </div>
+    </section>
+
     <section id="gateWorkspace" class="workspace">
         <aside class="side-panel" aria-label="Tarjetas de prueba">
             <div class="panel-heading">

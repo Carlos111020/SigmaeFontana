@@ -29,6 +29,8 @@ const ROLE_LOGINS = {
 let token = localStorage.getItem("sigmaeToken") || "";
 let activeUser = readStoredUser();
 let testCards = [];
+let adminStudents = [];
+let adminGrades = [];
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
@@ -50,6 +52,22 @@ const gateWorkspace = document.querySelector("#gateWorkspace");
 const guardianPanel = document.querySelector("#guardianPanel");
 const guardianContent = document.querySelector("#guardianContent");
 const refreshGuardianButton = document.querySelector("#refreshGuardianButton");
+const adminPanel = document.querySelector("#adminPanel");
+const refreshStudentsButton = document.querySelector("#refreshStudentsButton");
+const studentForm = document.querySelector("#studentForm");
+const studentFormTitle = document.querySelector("#studentFormTitle");
+const studentId = document.querySelector("#studentId");
+const studentCode = document.querySelector("#studentCode");
+const studentDocument = document.querySelector("#studentDocument");
+const studentNames = document.querySelector("#studentNames");
+const studentLastNames = document.querySelector("#studentLastNames");
+const studentGradeId = document.querySelector("#studentGradeId");
+const saveStudentButton = document.querySelector("#saveStudentButton");
+const clearStudentFormButton = document.querySelector("#clearStudentFormButton");
+const adminFeedback = document.querySelector("#adminFeedback");
+const studentStatusFilter = document.querySelector("#studentStatusFilter");
+const studentSearch = document.querySelector("#studentSearch");
+const studentList = document.querySelector("#studentList");
 
 async function init() {
     await loadTestCards();
@@ -70,6 +88,15 @@ async function init() {
     gateForm.addEventListener("submit", registerAccess);
     refreshDashboardButton.addEventListener("click", loadDashboard);
     refreshGuardianButton.addEventListener("click", loadGuardianDashboard);
+    refreshStudentsButton.addEventListener("click", loadAdminPanel);
+    studentForm.addEventListener("submit", saveStudent);
+    clearStudentFormButton.addEventListener("click", resetStudentForm);
+    studentStatusFilter.addEventListener("change", loadStudents);
+    studentSearch.addEventListener("input", renderStudents);
+
+    if (token && activeUser?.rol === "ADMINISTRADOR") {
+        await loadAdminPanel();
+    }
 }
 
 async function loadTestCards() {
@@ -137,6 +164,9 @@ async function login() {
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
         if (activeUser.rol === "COORDINADOR") {
             await loadDashboard();
+        }
+        if (activeUser.rol === "ADMINISTRADOR") {
+            await loadAdminPanel();
         }
         if (activeUser.rol === "ACUDIENTE") {
             await loadGuardianDashboard();
@@ -309,10 +339,197 @@ async function loadGuardianDashboard() {
 }
 
 async function apiGet(path) {
+    return apiRequest(path);
+}
+
+async function apiRequest(path, options = {}) {
+    const headers = {
+        "Authorization": `Bearer ${token}`,
+        ...(options.body ? { "Content-Type": "application/json" } : {})
+    };
     const response = await fetch(`${API_BASE}${path}`, {
-        headers: { "Authorization": `Bearer ${token}` }
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
     });
     return parseResponse(response);
+}
+
+async function loadAdminPanel() {
+    if (!token || activeUser?.rol !== "ADMINISTRADOR") {
+        return;
+    }
+
+    setAdminBusy(true);
+    adminFeedback.textContent = "Cargando gestion de estudiantes...";
+    try {
+        await Promise.all([loadGrades(), loadStudents()]);
+        adminFeedback.textContent = "Gestion lista.";
+    } catch (error) {
+        adminFeedback.textContent = error.message;
+    } finally {
+        setAdminBusy(false);
+    }
+}
+
+async function loadGrades() {
+    adminGrades = await apiGet("/grados?activo=true");
+    renderGradeOptions();
+}
+
+async function loadStudents() {
+    const status = studentStatusFilter.value;
+    const query = status === "" ? "" : `?activo=${status}`;
+    adminStudents = await apiGet(`/estudiantes${query}`);
+    renderStudents();
+}
+
+function renderGradeOptions() {
+    studentGradeId.innerHTML = adminGrades.map(grado => `
+        <option value="${grado.id}">${escapeHtml(grado.nombre)} - ${escapeHtml(grado.nivel)}</option>
+    `).join("");
+}
+
+async function saveStudent(event) {
+    event.preventDefault();
+
+    if (!token || activeUser?.rol !== "ADMINISTRADOR") {
+        adminFeedback.textContent = "Inicia sesion como Administrador.";
+        return;
+    }
+
+    const payload = {
+        codigoEstudiantil: studentCode.value.trim().toUpperCase(),
+        documento: studentDocument.value.trim(),
+        nombres: studentNames.value.trim(),
+        apellidos: studentLastNames.value.trim(),
+        gradoId: Number(studentGradeId.value)
+    };
+    const editingId = studentId.value;
+
+    setAdminBusy(true);
+    try {
+        const saved = await apiRequest(editingId ? `/estudiantes/${editingId}` : "/estudiantes", {
+            method: editingId ? "PUT" : "POST",
+            body: payload
+        });
+        adminFeedback.textContent = editingId
+                ? `Estudiante actualizado: ${saved.codigoEstudiantil}.`
+                : `Estudiante creado: ${saved.codigoEstudiantil}.`;
+        showToast(adminFeedback.textContent);
+        resetStudentForm();
+        await loadStudents();
+    } catch (error) {
+        adminFeedback.textContent = error.message;
+    } finally {
+        setAdminBusy(false);
+    }
+}
+
+function renderStudents() {
+    const search = studentSearch.value.trim().toLowerCase();
+    const filtered = adminStudents.filter(student => {
+        if (!search) {
+            return true;
+        }
+        return [
+            student.codigoEstudiantil,
+            student.documento,
+            student.nombres,
+            student.apellidos,
+            student.grado
+        ].some(value => String(value || "").toLowerCase().includes(search));
+    });
+
+    studentList.innerHTML = filtered.map(student => `
+        <article class="student-card ${student.activo ? "" : "inactive"}">
+            <div class="student-main">
+                <strong>${escapeHtml(student.nombres)} ${escapeHtml(student.apellidos)}</strong>
+                <span>${escapeHtml(student.codigoEstudiantil)} - ${escapeHtml(student.documento)}</span>
+            </div>
+            <div class="student-meta">
+                <span>Grado</span>
+                <strong>${escapeHtml(student.grado)}</strong>
+            </div>
+            <div class="student-meta">
+                <span>Estado</span>
+                <strong>${student.activo ? "Activo" : "Inactivo"}</strong>
+            </div>
+            <div class="student-actions">
+                <button class="secondary-button compact-button" type="button" data-action="edit" data-id="${student.id}">Editar</button>
+                <button class="danger-button compact-button" type="button" data-action="delete" data-id="${student.id}" ${student.activo ? "" : "disabled"}>Eliminar</button>
+            </div>
+        </article>
+    `).join("") || `<p class="hint">No hay estudiantes para este filtro.</p>`;
+
+    studentList.querySelectorAll("button[data-action]").forEach(button => {
+        button.addEventListener("click", () => {
+            const id = Number(button.dataset.id);
+            if (button.dataset.action === "edit") {
+                editStudent(id);
+            } else {
+                deleteStudent(id);
+            }
+        });
+    });
+}
+
+function editStudent(id) {
+    const student = adminStudents.find(item => item.id === id);
+    if (!student) {
+        adminFeedback.textContent = "Estudiante no encontrado en el listado actual.";
+        return;
+    }
+
+    studentId.value = student.id;
+    studentCode.value = student.codigoEstudiantil;
+    studentDocument.value = student.documento;
+    studentNames.value = student.nombres;
+    studentLastNames.value = student.apellidos;
+    studentGradeId.value = student.gradoId;
+    studentFormTitle.textContent = "Editar estudiante";
+    saveStudentButton.textContent = "Actualizar estudiante";
+    adminFeedback.textContent = `Editando ${student.codigoEstudiantil}.`;
+    studentCode.focus();
+}
+
+async function deleteStudent(id) {
+    const student = adminStudents.find(item => item.id === id);
+    if (!student) {
+        adminFeedback.textContent = "Estudiante no encontrado en el listado actual.";
+        return;
+    }
+
+    const ok = window.confirm(`Eliminar a ${student.nombres} ${student.apellidos}?`);
+    if (!ok) {
+        return;
+    }
+
+    setAdminBusy(true);
+    try {
+        await apiRequest(`/estudiantes/${id}`, { method: "DELETE" });
+        adminFeedback.textContent = `Estudiante eliminado: ${student.codigoEstudiantil}.`;
+        showToast(adminFeedback.textContent);
+        if (studentId.value === String(id)) {
+            resetStudentForm();
+        }
+        await loadStudents();
+    } catch (error) {
+        adminFeedback.textContent = error.message;
+    } finally {
+        setAdminBusy(false);
+    }
+}
+
+function resetStudentForm() {
+    studentForm.reset();
+    studentId.value = "";
+    if (adminGrades.length > 0) {
+        studentGradeId.value = adminGrades[0].id;
+    }
+    studentFormTitle.textContent = "Nuevo estudiante";
+    saveStudentButton.textContent = "Guardar estudiante";
+    adminFeedback.textContent = "";
 }
 
 function renderDashboard(metrics, registros, novedades) {
@@ -369,11 +586,17 @@ function renderGuardianDashboard(estudiantes) {
 
 function updateRoleView() {
     const effectiveRole = activeUser?.rol || roleSelect.value;
+    const isAdmin = activeUser?.rol === "ADMINISTRADOR";
     const isCoordinator = activeUser?.rol === "COORDINADOR";
     const isGuardian = effectiveRole === "ACUDIENTE";
+    adminPanel.classList.toggle("visible", isAdmin);
     dashboardPanel.classList.toggle("visible", isCoordinator);
     guardianPanel.classList.toggle("visible", activeUser?.rol === "ACUDIENTE");
-    gateWorkspace.classList.toggle("hidden", isGuardian);
+    gateWorkspace.classList.toggle("hidden", isGuardian || isAdmin);
+    if (!isAdmin) {
+        studentList.innerHTML = "";
+        adminFeedback.textContent = "";
+    }
     if (!isCoordinator) {
         dashboardContent.innerHTML = "";
     }
@@ -454,6 +677,15 @@ function setBusy(isBusy) {
     scanButton.textContent = isBusy ? "Procesando..." : "Registrar";
 }
 
+function setAdminBusy(isBusy) {
+    refreshStudentsButton.disabled = isBusy;
+    saveStudentButton.disabled = isBusy;
+    clearStudentFormButton.disabled = isBusy;
+    saveStudentButton.textContent = isBusy
+            ? "Guardando..."
+            : (studentId.value ? "Actualizar estudiante" : "Guardar estudiante");
+}
+
 function canUseGate() {
     return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
 }
@@ -487,6 +719,15 @@ function formatDateTime(value) {
 
 function getAccessMode() {
     return document.querySelector("input[name='accessMode']:checked")?.value || "ingresos";
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
 }
 
 init();
