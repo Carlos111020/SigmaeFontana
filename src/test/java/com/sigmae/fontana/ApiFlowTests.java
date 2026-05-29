@@ -1,7 +1,9 @@
 package com.sigmae.fontana;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -158,6 +160,26 @@ class ApiFlowTests {
     }
 
     @Test
+    void porteriaConsultaCarnetsActivosParaTalanquera() throws Exception {
+        var token = login("porteria@sigmae.edu.co", "Porteria123*");
+
+        var response = mockMvc.perform(get("/api/v1/estudiantes?activo=true")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var estudiantes = objectMapper.readTree(response.getResponse().getContentAsString());
+        var contieneEstudianteSemilla = false;
+        for (var estudiante : estudiantes) {
+            if ("EST-001".equals(estudiante.get("codigoEstudiantil").asText())) {
+                contieneEstudianteSemilla = true;
+                break;
+            }
+        }
+        assertTrue(contieneEstudianteSemilla);
+    }
+
+    @Test
     void porteriaRegistraIngresoYBloqueaDobleIngreso() throws Exception {
         var token = login("porteria@sigmae.edu.co", "Porteria123*");
         var puntoAccesoId = puntoAccesoRepository.findByNombre("Porteria principal")
@@ -246,6 +268,64 @@ class ApiFlowTests {
     }
 
     @Test
+    void creaNovedadesDesdePorteriaYCoordinacion() throws Exception {
+        var tokenPorteria = login("porteria@sigmae.edu.co", "Porteria123*");
+        var novedadPorteria = """
+                {
+                  "tipoNovedad": "OBSERVACION_SEGURIDAD",
+                  "descripcion": "Observacion creada desde porteria",
+                  "identificadorEstudiante": "EST-001"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/novedades")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenPorteria))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(novedadPorteria))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tipoNovedad").value("OBSERVACION_SEGURIDAD"))
+                .andExpect(jsonPath("$.estudiante").value("Sofia Gomez"));
+
+        var tokenAcudiente = login("acudiente@sigmae.edu.co", "Acudiente123*");
+        var notificacionesResponse = mockMvc.perform(get("/api/v1/acudientes/me/notificaciones")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAcudiente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tipoNotificacion").value("NOVEDAD"))
+                .andExpect(jsonPath("$[0].leida").value(false))
+                .andExpect(jsonPath("$[0].estudiante").value("Sofia Gomez"))
+                .andReturn();
+        var notificacionId = objectMapper.readTree(notificacionesResponse.getResponse().getContentAsString())
+                .get(0)
+                .get("id")
+                .asLong();
+
+        mockMvc.perform(patch("/api/v1/acudientes/me/notificaciones/{id}/leida", notificacionId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAcudiente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoNotificacion").value("NOVEDAD"))
+                .andExpect(jsonPath("$.leida").value(true));
+
+        var tokenCoordinador = login("coordinador@sigmae.edu.co", "Coord123*");
+        var estudianteId = estudianteRepository.findByCodigoEstudiantil("EST-001").orElseThrow().getId();
+        var novedadCoordinacion = """
+                {
+                  "tipoNovedad": "OTRO",
+                  "descripcion": "Seguimiento creado desde coordinacion",
+                  "estudianteId": %d
+                }
+                """.formatted(estudianteId);
+
+        mockMvc.perform(post("/api/v1/novedades")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenCoordinador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(novedadCoordinacion))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tipoNovedad").value("OTRO"))
+                .andExpect(jsonPath("$.estudianteId").value(estudianteId));
+    }
+
+    @Test
     void adminGestionaRelacionEstudianteAcudiente() throws Exception {
         var token = login("admin@sigmae.edu.co", "Admin123*");
         var gradoId = gradoRepository.findByNombre("5A").orElseThrow().getId();
@@ -303,6 +383,28 @@ class ApiFlowTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].parentesco").value("Madre"))
                 .andExpect(jsonPath("$[0].acudiente.correo").value("rosa.mendoza.rel@example.com"));
+
+        var usuarioAcudienteBody = """
+                {
+                  "nombres": "Rosa",
+                  "apellidos": "Mendoza",
+                  "correo": "rosa.mendoza.rel@example.com",
+                  "password": "Rosa123*",
+                  "rol": "ACUDIENTE"
+                }
+                """;
+        mockMvc.perform(post("/api/v1/usuarios")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(usuarioAcudienteBody))
+                .andExpect(status().isCreated());
+
+        var tokenAcudiente = login("rosa.mendoza.rel@example.com", "Rosa123*");
+        mockMvc.perform(get("/api/v1/acudientes/me/estudiantes")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAcudiente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].estudiante").value("Sofia Mendoza"));
 
         var relacionActualizadaBody = """
                 {

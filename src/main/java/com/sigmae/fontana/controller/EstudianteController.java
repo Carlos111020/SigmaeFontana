@@ -37,7 +37,7 @@ public class EstudianteController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR','COORDINADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','COORDINADOR','PORTERIA')")
     public ResponseEntity<List<EstudianteResponse>> listar(@RequestParam(required = false) Boolean activo) {
         return ResponseEntity.ok(estudianteService.listar(activo));
     }

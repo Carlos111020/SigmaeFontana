@@ -91,7 +91,7 @@ public class AcudienteServiceImpl implements AcudienteService {
     @Override
     @Transactional(readOnly = true)
     public List<AcudienteStudentResponse> misEstudiantes(String correoUsuario) {
-        return estudianteAcudienteRepository.findByAcudienteUsuarioCorreo(correoUsuario)
+        return estudianteAcudienteRepository.findMisRelacionesDeAcudiente(correoUsuario)
                 .stream()
                 .map(relacion -> {
                     var estudiante = relacion.getEstudiante();
@@ -113,7 +113,7 @@ public class AcudienteServiceImpl implements AcudienteService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificacionResponse> misNotificaciones(String correoUsuario) {
-        return notificacionRepository.findByAcudienteUsuarioCorreoOrderByFechaHoraDesc(correoUsuario)
+        return notificacionRepository.findMisNotificacionesDeAcudiente(correoUsuario)
                 .stream()
                 .map(notificacionMapper::toResponse)
                 .toList();
@@ -122,7 +122,7 @@ public class AcudienteServiceImpl implements AcudienteService {
     @Override
     @Transactional
     public NotificacionResponse marcarNotificacionLeida(Long notificacionId, String correoUsuario) {
-        var notificacion = notificacionRepository.findByIdAndAcudienteUsuarioCorreo(notificacionId, correoUsuario)
+        var notificacion = notificacionRepository.findMiNotificacionDeAcudiente(notificacionId, correoUsuario)
                 .orElseThrow(() -> new ResourceNotFoundException("Notificacion no encontrada"));
         notificacion.setLeida(true);
         return notificacionMapper.toResponse(notificacion);

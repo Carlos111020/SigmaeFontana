@@ -29,6 +29,7 @@ const ROLE_LOGINS = {
 let token = localStorage.getItem("sigmaeToken") || "";
 let activeUser = readStoredUser();
 let testCards = [];
+let fallbackCards = [];
 let adminStudents = [];
 let adminGrades = [];
 let adminGuardians = [];
@@ -36,11 +37,20 @@ let adminGuardianUsers = [];
 let adminStudentRelations = new Map();
 let adminUsers = [];
 let activeAdminView = "students";
+let noveltyStudents = [];
+let lastAccessStudent = null;
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
 const roleSelect = document.querySelector("#roleSelect");
+const manualLoginForm = document.querySelector("#manualLoginForm");
+const manualEmail = document.querySelector("#manualEmail");
+const manualPassword = document.querySelector("#manualPassword");
+const manualLoginButton = document.querySelector("#manualLoginButton");
+const loginFeedback = document.querySelector("#loginFeedback");
 const profilePanel = document.querySelector("#profilePanel");
+const cardListTitle = document.querySelector("#cardListTitle");
+const cardListMeta = document.querySelector("#cardListMeta");
 const cardList = document.querySelector("#cardList");
 const cardCode = document.querySelector("#cardCode");
 const gateForm = document.querySelector("#gateForm");
@@ -101,6 +111,17 @@ const userFeedback = document.querySelector("#userFeedback");
 const userStatusFilter = document.querySelector("#userStatusFilter");
 const userSearch = document.querySelector("#userSearch");
 const userList = document.querySelector("#userList");
+const novedadPanel = document.querySelector("#novedadPanel");
+const novedadRoleHint = document.querySelector("#novedadRoleHint");
+const novedadForm = document.querySelector("#novedadForm");
+const novedadStudentSelectField = document.querySelector("#novedadStudentSelectField");
+const novedadStudentCodeField = document.querySelector("#novedadStudentCodeField");
+const novedadStudentSelect = document.querySelector("#novedadStudentSelect");
+const novedadStudentCode = document.querySelector("#novedadStudentCode");
+const novedadType = document.querySelector("#novedadType");
+const novedadDescription = document.querySelector("#novedadDescription");
+const saveNovedadButton = document.querySelector("#saveNovedadButton");
+const novedadFeedback = document.querySelector("#novedadFeedback");
 
 async function init() {
     await loadTestCards();
@@ -109,6 +130,7 @@ async function init() {
     }
     refreshSession();
     loginButton.addEventListener("click", login);
+    manualLoginForm.addEventListener("submit", loginWithCredentials);
     roleSelect.addEventListener("change", () => {
         if (token && activeUser && roleSelect.value !== activeUser.rol) {
             clearSession();
@@ -132,30 +154,61 @@ async function init() {
     clearUserFormButton.addEventListener("click", resetUserForm);
     userStatusFilter.addEventListener("change", loadUsers);
     userSearch.addEventListener("input", renderUsers);
+    novedadForm.addEventListener("submit", saveNovedad);
 
-    if (token && activeUser?.rol === "ADMINISTRADOR") {
-        await loadAdminPanel();
+    if (token && activeUser?.rol) {
+        await loadRoleData();
     }
 }
 
 async function loadTestCards() {
     try {
         const response = await fetch("/assets/test-cards.json");
-        testCards = await parseResponse(response);
-        renderCards();
+        fallbackCards = await parseResponse(response);
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
     } catch (error) {
+        fallbackCards = [];
         testCards = [];
+        cardListMeta.textContent = "Sin carnets";
         cardList.innerHTML = `<p class="hint">No fue posible cargar los carnets de prueba.</p>`;
     }
 }
 
-function renderCards() {
+async function loadGateCards() {
+    if (!token || !canLoadStudentCards()) {
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
+        return;
+    }
+
+    cardListMeta.textContent = "Cargando...";
+    try {
+        const students = await apiGet("/estudiantes?activo=true");
+        testCards = students
+                .map(student => ({
+                    code: student.codigoEstudiantil,
+                    name: `${student.nombres} ${student.apellidos}`,
+                    grade: student.grado
+                }))
+                .sort((left, right) => left.code.localeCompare(right.code, "es-CO"));
+        renderCards(`${testCards.length} estudiantes activos`);
+    } catch (error) {
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
+        showToast(error.message);
+    }
+}
+
+function renderCards(metaText = `${testCards.length} carnets`) {
+    cardListTitle.textContent = canLoadStudentCards() ? "Carnets activos" : "Tarjetas demo";
+    cardListMeta.textContent = metaText;
     cardList.innerHTML = testCards.map(card => `
         <button class="test-card" type="button" data-code="${card.code}">
-            <strong>${card.code}</strong>
-            <span>${card.name} - ${card.grade}</span>
+            <strong>${escapeHtml(card.code)}</strong>
+            <span>${escapeHtml(card.name)} - ${escapeHtml(card.grade)}</span>
         </button>
-    `).join("");
+    `).join("") || `<p class="hint">No hay carnets disponibles.</p>`;
 
     cardList.querySelectorAll("button").forEach(button => {
         button.addEventListener("click", () => {
@@ -169,7 +222,7 @@ function refreshSession() {
     if (token && activeUser) {
         sessionStatus.textContent = `${roleLabel(activeUser.rol)} conectado`;
         sessionStatus.className = "status-pill status-ok";
-        loginButton.textContent = "Cambiar sesion";
+        loginButton.textContent = "Cambiar demo";
         renderProfile();
         updateRoleView();
         return;
@@ -177,44 +230,78 @@ function refreshSession() {
 
     sessionStatus.textContent = "Sin conexion";
     sessionStatus.className = "status-pill status-muted";
-    loginButton.textContent = "Iniciar sesion";
+    loginButton.textContent = "Usar demo";
     renderProfile();
     updateRoleView();
 }
 
 async function login() {
     const credentials = ROLE_LOGINS[roleSelect.value];
+    await authenticate(credentials.correo, credentials.password);
+}
+
+async function loginWithCredentials(event) {
+    event.preventDefault();
+    const correo = manualEmail.value.trim();
+    const password = manualPassword.value;
+    if (!correo || !password) {
+        loginFeedback.textContent = "Digita correo y password.";
+        return;
+    }
+
+    await authenticate(correo, password);
+}
+
+async function authenticate(correo, password) {
     setBusy(true);
+    loginFeedback.textContent = "";
     try {
         const response = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                correo: credentials.correo,
-                password: credentials.password
+                correo,
+                password
             })
         });
         const data = await parseResponse(response);
-        token = data.token;
-        activeUser = data.usuario;
-        localStorage.setItem("sigmaeToken", token);
-        localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
-        refreshSession();
+        applySession(data);
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
-        if (activeUser.rol === "COORDINADOR") {
-            await loadDashboard();
-        }
-        if (activeUser.rol === "ADMINISTRADOR") {
-            await loadAdminPanel();
-        }
-        if (activeUser.rol === "ACUDIENTE") {
-            await loadGuardianDashboard();
-        }
+        loginFeedback.textContent = `Sesion iniciada como ${roleLabel(activeUser.rol)}.`;
+        manualPassword.value = "";
+        await loadRoleData();
     } catch (error) {
         clearSession();
+        loginFeedback.textContent = error.message;
         renderError(error.message);
     } finally {
         setBusy(false);
+    }
+}
+
+function applySession(data) {
+    token = data.token;
+    activeUser = data.usuario;
+    if (ROLE_LOGINS[activeUser?.rol]) {
+        roleSelect.value = activeUser.rol;
+    }
+    localStorage.setItem("sigmaeToken", token);
+    localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
+    refreshSession();
+}
+
+async function loadRoleData() {
+    if (activeUser?.rol === "COORDINADOR") {
+        await Promise.all([loadDashboard(), loadNovedadPanel(), loadGateCards()]);
+    }
+    if (activeUser?.rol === "ADMINISTRADOR") {
+        await loadAdminPanel();
+    }
+    if (activeUser?.rol === "PORTERIA") {
+        await Promise.all([loadNovedadPanel(), loadGateCards()]);
+    }
+    if (activeUser?.rol === "ACUDIENTE") {
+        await loadGuardianDashboard();
     }
 }
 
@@ -259,6 +346,12 @@ async function registerAccess(event) {
         });
         const data = await parseResponse(response);
         const normalized = normalizeAccessResponse(data, code, mode);
+        lastAccessStudent = {
+            id: normalized.estudianteId,
+            code: normalized.codigoTarjeta,
+            name: normalized.estudiante
+        };
+        prefillNovedadFromAccess(lastAccessStudent);
         openGate(normalized.codigoTarjeta);
         renderSuccess(normalized);
         notifyGuardian(normalized);
@@ -373,10 +466,107 @@ async function loadGuardianDashboard() {
 
     guardianContent.innerHTML = `<p class="hint">Cargando informacion del estudiante...</p>`;
     try {
-        const estudiantes = await apiGet("/acudientes/me/estudiantes");
-        renderGuardianDashboard(estudiantes);
+        const [estudiantes, notificaciones] = await Promise.all([
+            apiGet("/acudientes/me/estudiantes"),
+            apiGet("/acudientes/me/notificaciones")
+        ]);
+        renderGuardianDashboard(estudiantes, notificaciones);
     } catch (error) {
         guardianContent.innerHTML = `<p class="hint">${error.message}</p>`;
+    }
+}
+
+async function loadNovedadPanel() {
+    if (!token || !canCreateNovedad()) {
+        return;
+    }
+
+    const isCoordinator = activeUser?.rol === "COORDINADOR";
+    novedadRoleHint.textContent = isCoordinator
+            ? "Selecciona estudiante y registra el seguimiento"
+            : "Registra por carnet o documento";
+    novedadStudentSelectField.hidden = !isCoordinator;
+    novedadStudentCodeField.hidden = isCoordinator;
+    novedadStudentSelect.required = isCoordinator;
+    novedadStudentCode.required = !isCoordinator;
+
+    if (isCoordinator) {
+        novedadFeedback.textContent = "Cargando estudiantes...";
+        try {
+            noveltyStudents = await apiGet("/estudiantes?activo=true");
+            renderNovedadStudentOptions();
+            if (lastAccessStudent?.id) {
+                novedadStudentSelect.value = String(lastAccessStudent.id);
+            }
+            novedadFeedback.textContent = "";
+        } catch (error) {
+            novedadFeedback.textContent = error.message;
+        }
+        return;
+    }
+
+    if (lastAccessStudent?.code) {
+        novedadStudentCode.value = lastAccessStudent.code;
+    }
+    novedadFeedback.textContent = "";
+}
+
+function renderNovedadStudentOptions() {
+    novedadStudentSelect.innerHTML = `
+        <option value="">Selecciona estudiante</option>
+        ${noveltyStudents.map(student => `
+            <option value="${student.id}">${escapeHtml(student.codigoEstudiantil)} - ${escapeHtml(student.nombres)} ${escapeHtml(student.apellidos)} (${escapeHtml(student.grado)})</option>
+        `).join("")}
+    `;
+}
+
+function prefillNovedadFromAccess(student) {
+    if (!student || !canCreateNovedad()) {
+        return;
+    }
+    if (activeUser?.rol === "COORDINADOR" && student.id) {
+        novedadStudentSelect.value = String(student.id);
+    }
+    if (activeUser?.rol === "PORTERIA" && student.code) {
+        novedadStudentCode.value = student.code;
+    }
+}
+
+async function saveNovedad(event) {
+    event.preventDefault();
+
+    if (!token || !canCreateNovedad()) {
+        novedadFeedback.textContent = "Inicia sesion como Porteria o Coordinador.";
+        return;
+    }
+
+    const payload = {
+        tipoNovedad: novedadType.value,
+        descripcion: novedadDescription.value.trim()
+    };
+    if (activeUser?.rol === "COORDINADOR") {
+        payload.estudianteId = Number(novedadStudentSelect.value);
+    } else {
+        payload.identificadorEstudiante = novedadStudentCode.value.trim().toUpperCase();
+    }
+
+    setNovedadBusy(true);
+    try {
+        const saved = await apiRequest("/novedades", {
+            method: "POST",
+            body: payload
+        });
+        novedadFeedback.textContent = `Novedad creada para ${saved.estudiante}.`;
+        showToast(novedadFeedback.textContent);
+        novedadDescription.value = "";
+        novedadType.value = "OBSERVACION_SEGURIDAD";
+        if (activeUser?.rol === "COORDINADOR") {
+            await loadDashboard();
+        }
+    } catch (error) {
+        novedadFeedback.textContent = error.message;
+    } finally {
+        setNovedadBusy(false);
     }
 }
 
@@ -515,6 +705,12 @@ async function saveStudent(event) {
         if (!guardianPayload.usuarioId && existingGuardian?.usuarioId) {
             guardianPayload.usuarioId = existingGuardian.usuarioId;
         }
+        if (!guardianPayload.usuarioId) {
+            const matchingGuardianUser = findGuardianUserByEmail(guardianPayload.correo);
+            if (matchingGuardianUser) {
+                guardianPayload.usuarioId = matchingGuardianUser.id;
+            }
+        }
 
         const saved = await apiRequest(editingId ? `/estudiantes/${editingId}` : "/estudiantes", {
             method: editingId ? "PUT" : "POST",
@@ -550,7 +746,7 @@ async function saveStudent(event) {
                 : `Estudiante y acudiente creados: ${saved.codigoEstudiantil}.`;
         showToast(adminFeedback.textContent);
         resetStudentForm();
-        await Promise.all([loadGuardians(), loadStudents()]);
+        await Promise.all([loadGuardians(), loadStudents(), loadGateCards()]);
     } catch (error) {
         adminFeedback.textContent = error.message;
     } finally {
@@ -594,7 +790,7 @@ function renderStudents() {
                 <strong>${guardian ? `${escapeHtml(guardian.nombres)} ${escapeHtml(guardian.apellidos)}` : "Sin acudiente"}</strong>
                 <small>${guardian ? `${escapeHtml(relation.parentesco)} - ${escapeHtml(guardian.telefono)}` : "Pendiente"}</small>
                 <small>${guardian ? escapeHtml(guardian.correo) : ""}</small>
-                <small>${guardian?.usuarioCorreo ? `Login: ${escapeHtml(guardian.usuarioCorreo)}` : ""}</small>
+                <small>${guardian ? (guardian.usuarioCorreo ? `Login: ${escapeHtml(guardian.usuarioCorreo)}` : "Sin usuario de acceso") : ""}</small>
             </div>
             <div class="student-actions">
                 <button class="secondary-button compact-button" type="button" data-action="edit" data-id="${student.id}">Editar</button>
@@ -676,7 +872,7 @@ async function deleteStudent(id) {
         if (studentId.value === String(id)) {
             resetStudentForm();
         }
-        await loadStudents();
+        await Promise.all([loadStudents(), loadGateCards()]);
     } catch (error) {
         adminFeedback.textContent = error.message;
     } finally {
@@ -710,6 +906,11 @@ function findExistingGuardian(documento, correo) {
         String(guardian.documento || "").toLowerCase() === normalizedDocumento
         || String(guardian.correo || "").toLowerCase() === normalizedCorreo
     );
+}
+
+function findGuardianUserByEmail(correo) {
+    const normalizedCorreo = correo.trim().toLowerCase();
+    return adminGuardianUsers.find(user => String(user.correo || "").toLowerCase() === normalizedCorreo);
 }
 
 async function loadUsers() {
@@ -896,7 +1097,9 @@ function renderDashboard(metrics, registros, novedades) {
     `;
 }
 
-function renderGuardianDashboard(estudiantes) {
+function renderGuardianDashboard(estudiantes, notificaciones = []) {
+    const novedades = notificaciones.filter(item => item.tipoNotificacion === "NOVEDAD");
+    const otrasNotificaciones = notificaciones.filter(item => item.tipoNotificacion !== "NOVEDAD");
     guardianContent.innerHTML = `
         <div class="student-status-grid">
             ${estudiantes.map(student => {
@@ -926,7 +1129,60 @@ function renderGuardianDashboard(estudiantes) {
                 `;
             }).join("") || `<p class="hint">No hay estudiantes asociados a este acudiente.</p>`}
         </div>
+        <div class="notification-board">
+            <section class="dashboard-list">
+                <div class="list-heading">
+                    <h3>Novedades reportadas</h3>
+                    <span>${novedades.filter(item => !item.leida).length} sin leer</span>
+                </div>
+                <div class="notification-list">
+                    ${renderNotificationList(novedades, "No hay novedades reportadas.")}
+                </div>
+            </section>
+            <section class="dashboard-list">
+                <div class="list-heading">
+                    <h3>Notificaciones de acceso</h3>
+                    <span>${otrasNotificaciones.filter(item => !item.leida).length} sin leer</span>
+                </div>
+                <div class="notification-list">
+                    ${renderNotificationList(otrasNotificaciones.slice(0, 5), "Sin notificaciones de ingreso o salida.")}
+                </div>
+            </section>
+        </div>
     `;
+
+    guardianContent.querySelectorAll("button[data-notification-id]").forEach(button => {
+        button.addEventListener("click", () => markNotificationRead(Number(button.dataset.notificationId)));
+    });
+}
+
+function renderNotificationList(notificaciones, emptyMessage) {
+    return notificaciones.map(item => `
+        <article class="notification-card ${item.leida ? "read" : "unread"}">
+            <div>
+                <span>${notificationTypeLabel(item.tipoNotificacion)} - ${formatDateTime(item.fechaHora)}</span>
+                <strong>${escapeHtml(item.estudiante)}</strong>
+                <p>${escapeHtml(item.mensaje)}</p>
+            </div>
+            <button class="secondary-button compact-button" type="button" data-notification-id="${item.id}" ${item.leida ? "disabled" : ""}>
+                ${item.leida ? "Leida" : "Marcar leida"}
+            </button>
+        </article>
+    `).join("") || `<p class="hint">${emptyMessage}</p>`;
+}
+
+async function markNotificationRead(id) {
+    if (!token || activeUser?.rol !== "ACUDIENTE") {
+        return;
+    }
+
+    try {
+        await apiRequest(`/acudientes/me/notificaciones/${id}/leida`, { method: "PATCH" });
+        showToast("Notificacion marcada como leida.");
+        await loadGuardianDashboard();
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 function updateRoleView() {
@@ -934,8 +1190,10 @@ function updateRoleView() {
     const isAdmin = activeUser?.rol === "ADMINISTRADOR";
     const isCoordinator = activeUser?.rol === "COORDINADOR";
     const isGuardian = effectiveRole === "ACUDIENTE";
+    const hasNovedadAccess = canCreateNovedad();
     adminPanel.classList.toggle("visible", isAdmin);
     dashboardPanel.classList.toggle("visible", isCoordinator);
+    novedadPanel.classList.toggle("visible", hasNovedadAccess);
     guardianPanel.classList.toggle("visible", activeUser?.rol === "ACUDIENTE");
     gateWorkspace.classList.toggle("hidden", isGuardian || isAdmin);
     if (!isAdmin) {
@@ -949,6 +1207,9 @@ function updateRoleView() {
     }
     if (!isGuardian) {
         guardianContent.innerHTML = "";
+    }
+    if (!hasNovedadAccess) {
+        novedadFeedback.textContent = "";
     }
 }
 
@@ -1021,7 +1282,11 @@ function resetGate() {
 function setBusy(isBusy) {
     scanButton.disabled = isBusy;
     loginButton.disabled = isBusy;
+    manualEmail.disabled = isBusy;
+    manualPassword.disabled = isBusy;
+    manualLoginButton.disabled = isBusy;
     scanButton.textContent = isBusy ? "Procesando..." : "Registrar";
+    manualLoginButton.textContent = isBusy ? "Entrando..." : "Entrar";
 }
 
 function setAdminBusy(isBusy) {
@@ -1038,7 +1303,22 @@ function setAdminBusy(isBusy) {
             : (userId.value ? "Actualizar usuario" : "Guardar usuario");
 }
 
+function setNovedadBusy(isBusy) {
+    saveNovedadButton.disabled = isBusy;
+    saveNovedadButton.textContent = isBusy ? "Creando..." : "Crear novedad";
+}
+
 function canUseGate() {
+    return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
+}
+
+function canLoadStudentCards() {
+    return activeUser?.rol === "ADMINISTRADOR"
+            || activeUser?.rol === "COORDINADOR"
+            || activeUser?.rol === "PORTERIA";
+}
+
+function canCreateNovedad() {
     return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
 }
 
@@ -1047,6 +1327,8 @@ function clearSession() {
     activeUser = null;
     localStorage.removeItem("sigmaeToken");
     localStorage.removeItem("sigmaeUser");
+    testCards = fallbackCards;
+    renderCards(`${fallbackCards.length} carnets demo`);
     refreshSession();
 }
 
@@ -1060,6 +1342,16 @@ function readStoredUser() {
 
 function roleLabel(role) {
     return ROLE_LOGINS[role]?.label || role || "Usuario";
+}
+
+function notificationTypeLabel(type) {
+    const labels = {
+        INGRESO: "Ingreso",
+        SALIDA: "Salida",
+        NOVEDAD: "Novedad",
+        ALERTA: "Alerta"
+    };
+    return labels[type] || type || "Notificacion";
 }
 
 function formatDateTime(value) {

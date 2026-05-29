@@ -21,8 +21,27 @@
                 <option value="COORDINADOR">Coordinador</option>
                 <option value="ACUDIENTE">Acudiente</option>
             </select>
-            <button id="loginButton" class="secondary-button" type="button">Iniciar sesion</button>
+            <button id="loginButton" class="secondary-button" type="button">Usar demo</button>
         </div>
+    </section>
+
+    <section id="loginPanel" class="login-panel" aria-label="Inicio de sesion">
+        <form id="manualLoginForm" class="credential-form">
+            <div class="login-panel-heading">
+                <h2>Inicio de sesion</h2>
+                <span>Credenciales institucionales</span>
+            </div>
+            <label>
+                Correo
+                <input id="manualEmail" autocomplete="username" maxlength="120" type="email" required placeholder="usuario@sigmae.edu.co">
+            </label>
+            <label>
+                Password
+                <input id="manualPassword" autocomplete="current-password" maxlength="80" type="password" required placeholder="Password">
+            </label>
+            <button id="manualLoginButton" class="primary-button" type="submit">Entrar</button>
+        </form>
+        <p id="loginFeedback" class="hint"></p>
     </section>
 
     <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>
@@ -96,7 +115,7 @@
                             <input id="guardianRelationship" autocomplete="off" maxlength="40" required placeholder="Madre">
                         </label>
                         <label class="wide-field">
-                            Usuario de acceso
+                            Usuario de acceso del acudiente
                             <select id="guardianUserSelect"></select>
                         </label>
                         <label class="check-field wide-field">
@@ -185,10 +204,10 @@
     </section>
 
     <section id="gateWorkspace" class="workspace">
-        <aside class="side-panel" aria-label="Tarjetas de prueba">
+        <aside class="side-panel" aria-label="Carnets de estudiantes">
             <div class="panel-heading">
-                <h2>Tarjetas test</h2>
-                <span>5 carnets semilla</span>
+                <h2 id="cardListTitle">Carnets</h2>
+                <span id="cardListMeta">Cargando...</span>
             </div>
             <div id="cardList" class="test-cards"></div>
         </aside>
@@ -226,6 +245,43 @@
                 Esperando lectura de carnet.
             </div>
         </section>
+    </section>
+
+    <section id="novedadPanel" class="novedad-panel" aria-label="Crear novedad">
+        <div class="panel-heading">
+            <h2>Crear novedad</h2>
+            <span id="novedadRoleHint">Porteria y coordinacion</span>
+        </div>
+        <form id="novedadForm" class="novedad-form">
+            <div class="novedad-form-grid">
+                <label id="novedadStudentSelectField">
+                    Estudiante
+                    <select id="novedadStudentSelect"></select>
+                </label>
+                <label id="novedadStudentCodeField">
+                    Carnet o documento
+                    <input id="novedadStudentCode" autocomplete="off" maxlength="30" placeholder="EST-001">
+                </label>
+                <label>
+                    Tipo
+                    <select id="novedadType" required>
+                        <option value="OBSERVACION_SEGURIDAD">Observacion de seguridad</option>
+                        <option value="SALIDA_ANTICIPADA">Salida anticipada</option>
+                        <option value="INGRESO_NO_CONFIRMADO">Ingreso no confirmado</option>
+                        <option value="ERROR_REGISTRO">Error de registro</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </label>
+                <label class="wide-field">
+                    Descripcion
+                    <textarea id="novedadDescription" maxlength="500" required placeholder="Describe lo ocurrido"></textarea>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button id="saveNovedadButton" class="primary-button" type="submit">Crear novedad</button>
+            </div>
+            <p id="novedadFeedback" class="hint"></p>
+        </form>
     </section>
 
     <section id="dashboardPanel" class="dashboard-panel" aria-label="Dashboard coordinador">

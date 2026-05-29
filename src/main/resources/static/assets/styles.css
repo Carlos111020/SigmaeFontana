@@ -27,7 +27,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
     font: inherit;
 }
 
@@ -99,6 +100,46 @@ h2 {
     gap: 10px;
 }
 
+.login-panel {
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 10px 28px rgba(23, 32, 38, 0.08);
+}
+
+.credential-form {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.75fr) minmax(220px, 1fr) minmax(180px, 0.85fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.login-panel-heading {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.login-panel-heading h2 {
+    margin: 0;
+}
+
+.login-panel-heading span {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.credential-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
 .profile-panel {
     display: flex;
     align-items: center;
@@ -160,6 +201,10 @@ h2 {
 }
 
 .hidden {
+    display: none !important;
+}
+
+[hidden] {
     display: none !important;
 }
 
@@ -319,9 +364,9 @@ h2 {
 }
 
 input,
-select {
+select,
+textarea {
     width: 100%;
-    min-height: 44px;
     padding: 0 12px;
     border: 1px solid #b8c3ca;
     border-radius: 8px;
@@ -330,14 +375,27 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
     outline: 3px solid rgba(20, 108, 95, 0.18);
     border-color: var(--primary);
+}
+
+input,
+select {
+    min-height: 44px;
 }
 
 select {
     width: 160px;
     cursor: pointer;
+}
+
+textarea {
+    min-height: 112px;
+    padding-top: 10px;
+    line-height: 1.4;
+    resize: vertical;
 }
 
 .primary-button,
@@ -460,7 +518,8 @@ select {
     transform: translateY(0);
 }
 
-.dashboard-panel {
+.dashboard-panel,
+.novedad-panel {
     display: none;
     margin-top: 16px;
     padding: 18px;
@@ -470,8 +529,37 @@ select {
     box-shadow: var(--shadow);
 }
 
-.dashboard-panel.visible {
+.dashboard-panel.visible,
+.novedad-panel.visible {
     display: block;
+}
+
+.novedad-form {
+    display: grid;
+    gap: 12px;
+}
+
+.novedad-form-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 0.8fr);
+    gap: 12px;
+}
+
+.novedad-form-grid label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.novedad-form-grid .wide-field {
+    grid-column: 1 / -1;
+}
+
+.novedad-form select {
+    width: 100%;
 }
 
 .admin-panel {
@@ -747,9 +835,77 @@ select {
     font-size: 0.95rem;
 }
 
+.list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.list-heading h3 {
+    margin: 0;
+}
+
+.list-heading span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
 .dashboard-list p {
     margin: 6px 0;
     color: var(--muted);
+}
+
+.notification-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.notification-list {
+    display: grid;
+    gap: 10px;
+}
+
+.notification-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.notification-card.unread {
+    border-color: rgba(20, 108, 95, 0.32);
+    background: #eef8f6;
+}
+
+.notification-card.read {
+    opacity: 0.74;
+}
+
+.notification-card span,
+.notification-card strong,
+.notification-card p {
+    display: block;
+}
+
+.notification-card span {
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.notification-card p {
+    margin-bottom: 0;
+    overflow-wrap: anywhere;
 }
 
 .student-status-grid {
@@ -804,12 +960,28 @@ select {
         flex-direction: column;
     }
 
+    .credential-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .student-status-card {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .notification-board {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-card {
+        grid-template-columns: 1fr;
+    }
+
+    .novedad-form-grid {
+        grid-template-columns: 1fr;
     }
 
     .admin-layout {
@@ -837,6 +1009,7 @@ select {
     }
 
     .session-card,
+    .credential-form,
     .scan-row {
         width: 100%;
         grid-template-columns: 1fr;
@@ -861,6 +1034,7 @@ select {
     }
 
     .form-grid,
+    .novedad-form-grid,
     .student-card,
     .student-card-rich,
     .user-card,
