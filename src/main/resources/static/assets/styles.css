@@ -795,9 +795,77 @@ textarea {
     font-size: 0.95rem;
 }
 
+.list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.list-heading h3 {
+    margin: 0;
+}
+
+.list-heading span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
 .dashboard-list p {
     margin: 6px 0;
     color: var(--muted);
+}
+
+.notification-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.notification-list {
+    display: grid;
+    gap: 10px;
+}
+
+.notification-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.notification-card.unread {
+    border-color: rgba(20, 108, 95, 0.32);
+    background: #eef8f6;
+}
+
+.notification-card.read {
+    opacity: 0.74;
+}
+
+.notification-card span,
+.notification-card strong,
+.notification-card p {
+    display: block;
+}
+
+.notification-card span {
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.notification-card p {
+    margin-bottom: 0;
+    overflow-wrap: anywhere;
 }
 
 .student-status-grid {
@@ -858,6 +926,14 @@ textarea {
 
     .student-status-card {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .notification-board {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-card {
+        grid-template-columns: 1fr;
     }
 
     .novedad-form-grid {

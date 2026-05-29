@@ -402,8 +402,11 @@ async function loadGuardianDashboard() {
 
     guardianContent.innerHTML = `<p class="hint">Cargando informacion del estudiante...</p>`;
     try {
-        const estudiantes = await apiGet("/acudientes/me/estudiantes");
-        renderGuardianDashboard(estudiantes);
+        const [estudiantes, notificaciones] = await Promise.all([
+            apiGet("/acudientes/me/estudiantes"),
+            apiGet("/acudientes/me/notificaciones")
+        ]);
+        renderGuardianDashboard(estudiantes, notificaciones);
     } catch (error) {
         guardianContent.innerHTML = `<p class="hint">${error.message}</p>`;
     }
@@ -1019,7 +1022,9 @@ function renderDashboard(metrics, registros, novedades) {
     `;
 }
 
-function renderGuardianDashboard(estudiantes) {
+function renderGuardianDashboard(estudiantes, notificaciones = []) {
+    const novedades = notificaciones.filter(item => item.tipoNotificacion === "NOVEDAD");
+    const otrasNotificaciones = notificaciones.filter(item => item.tipoNotificacion !== "NOVEDAD");
     guardianContent.innerHTML = `
         <div class="student-status-grid">
             ${estudiantes.map(student => {
@@ -1049,7 +1054,60 @@ function renderGuardianDashboard(estudiantes) {
                 `;
             }).join("") || `<p class="hint">No hay estudiantes asociados a este acudiente.</p>`}
         </div>
+        <div class="notification-board">
+            <section class="dashboard-list">
+                <div class="list-heading">
+                    <h3>Novedades reportadas</h3>
+                    <span>${novedades.filter(item => !item.leida).length} sin leer</span>
+                </div>
+                <div class="notification-list">
+                    ${renderNotificationList(novedades, "No hay novedades reportadas.")}
+                </div>
+            </section>
+            <section class="dashboard-list">
+                <div class="list-heading">
+                    <h3>Notificaciones de acceso</h3>
+                    <span>${otrasNotificaciones.filter(item => !item.leida).length} sin leer</span>
+                </div>
+                <div class="notification-list">
+                    ${renderNotificationList(otrasNotificaciones.slice(0, 5), "Sin notificaciones de ingreso o salida.")}
+                </div>
+            </section>
+        </div>
     `;
+
+    guardianContent.querySelectorAll("button[data-notification-id]").forEach(button => {
+        button.addEventListener("click", () => markNotificationRead(Number(button.dataset.notificationId)));
+    });
+}
+
+function renderNotificationList(notificaciones, emptyMessage) {
+    return notificaciones.map(item => `
+        <article class="notification-card ${item.leida ? "read" : "unread"}">
+            <div>
+                <span>${notificationTypeLabel(item.tipoNotificacion)} - ${formatDateTime(item.fechaHora)}</span>
+                <strong>${escapeHtml(item.estudiante)}</strong>
+                <p>${escapeHtml(item.mensaje)}</p>
+            </div>
+            <button class="secondary-button compact-button" type="button" data-notification-id="${item.id}" ${item.leida ? "disabled" : ""}>
+                ${item.leida ? "Leida" : "Marcar leida"}
+            </button>
+        </article>
+    `).join("") || `<p class="hint">${emptyMessage}</p>`;
+}
+
+async function markNotificationRead(id) {
+    if (!token || activeUser?.rol !== "ACUDIENTE") {
+        return;
+    }
+
+    try {
+        await apiRequest(`/acudientes/me/notificaciones/${id}/leida`, { method: "PATCH" });
+        showToast("Notificacion marcada como leida.");
+        await loadGuardianDashboard();
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 function updateRoleView() {
@@ -1197,6 +1255,16 @@ function readStoredUser() {
 
 function roleLabel(role) {
     return ROLE_LOGINS[role]?.label || role || "Usuario";
+}
+
+function notificationTypeLabel(type) {
+    const labels = {
+        INGRESO: "Ingreso",
+        SALIDA: "Salida",
+        NOVEDAD: "Novedad",
+        ALERTA: "Alerta"
+    };
+    return labels[type] || type || "Notificacion";
 }
 
 function formatDateTime(value) {

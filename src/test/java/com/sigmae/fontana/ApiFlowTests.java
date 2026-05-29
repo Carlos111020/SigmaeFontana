@@ -2,6 +2,7 @@ package com.sigmae.fontana;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -264,6 +265,25 @@ class ApiFlowTests {
                 .andExpect(jsonPath("$.estado").value("PENDIENTE"))
                 .andExpect(jsonPath("$.tipoNovedad").value("OBSERVACION_SEGURIDAD"))
                 .andExpect(jsonPath("$.estudiante").value("Sofia Gomez"));
+
+        var tokenAcudiente = login("acudiente@sigmae.edu.co", "Acudiente123*");
+        var notificacionesResponse = mockMvc.perform(get("/api/v1/acudientes/me/notificaciones")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAcudiente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tipoNotificacion").value("NOVEDAD"))
+                .andExpect(jsonPath("$[0].leida").value(false))
+                .andExpect(jsonPath("$[0].estudiante").value("Sofia Gomez"))
+                .andReturn();
+        var notificacionId = objectMapper.readTree(notificacionesResponse.getResponse().getContentAsString())
+                .get(0)
+                .get("id")
+                .asLong();
+
+        mockMvc.perform(patch("/api/v1/acudientes/me/notificaciones/{id}/leida", notificacionId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAcudiente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoNotificacion").value("NOVEDAD"))
+                .andExpect(jsonPath("$.leida").value(true));
 
         var tokenCoordinador = login("coordinador@sigmae.edu.co", "Coord123*");
         var estudianteId = estudianteRepository.findByCodigoEstudiantil("EST-001").orElseThrow().getId();
