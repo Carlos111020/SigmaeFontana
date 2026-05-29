@@ -705,6 +705,12 @@ async function saveStudent(event) {
         if (!guardianPayload.usuarioId && existingGuardian?.usuarioId) {
             guardianPayload.usuarioId = existingGuardian.usuarioId;
         }
+        if (!guardianPayload.usuarioId) {
+            const matchingGuardianUser = findGuardianUserByEmail(guardianPayload.correo);
+            if (matchingGuardianUser) {
+                guardianPayload.usuarioId = matchingGuardianUser.id;
+            }
+        }
 
         const saved = await apiRequest(editingId ? `/estudiantes/${editingId}` : "/estudiantes", {
             method: editingId ? "PUT" : "POST",
@@ -900,6 +906,11 @@ function findExistingGuardian(documento, correo) {
         String(guardian.documento || "").toLowerCase() === normalizedDocumento
         || String(guardian.correo || "").toLowerCase() === normalizedCorreo
     );
+}
+
+function findGuardianUserByEmail(correo) {
+    const normalizedCorreo = correo.trim().toLowerCase();
+    return adminGuardianUsers.find(user => String(user.correo || "").toLowerCase() === normalizedCorreo);
 }
 
 async function loadUsers() {
