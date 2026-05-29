@@ -21,8 +21,27 @@
                 <option value="COORDINADOR">Coordinador</option>
                 <option value="ACUDIENTE">Acudiente</option>
             </select>
-            <button id="loginButton" class="secondary-button" type="button">Iniciar sesion</button>
+            <button id="loginButton" class="secondary-button" type="button">Usar demo</button>
         </div>
+    </section>
+
+    <section id="loginPanel" class="login-panel" aria-label="Inicio de sesion">
+        <form id="manualLoginForm" class="credential-form">
+            <div class="login-panel-heading">
+                <h2>Inicio de sesion</h2>
+                <span>Credenciales institucionales</span>
+            </div>
+            <label>
+                Correo
+                <input id="manualEmail" autocomplete="username" maxlength="120" type="email" required placeholder="usuario@sigmae.edu.co">
+            </label>
+            <label>
+                Password
+                <input id="manualPassword" autocomplete="current-password" maxlength="80" type="password" required placeholder="Password">
+            </label>
+            <button id="manualLoginButton" class="primary-button" type="submit">Entrar</button>
+        </form>
+        <p id="loginFeedback" class="hint"></p>
     </section>
 
     <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>

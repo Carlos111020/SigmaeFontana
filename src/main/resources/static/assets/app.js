@@ -42,6 +42,11 @@ let lastAccessStudent = null;
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
 const roleSelect = document.querySelector("#roleSelect");
+const manualLoginForm = document.querySelector("#manualLoginForm");
+const manualEmail = document.querySelector("#manualEmail");
+const manualPassword = document.querySelector("#manualPassword");
+const manualLoginButton = document.querySelector("#manualLoginButton");
+const loginFeedback = document.querySelector("#loginFeedback");
 const profilePanel = document.querySelector("#profilePanel");
 const cardList = document.querySelector("#cardList");
 const cardCode = document.querySelector("#cardCode");
@@ -122,6 +127,7 @@ async function init() {
     }
     refreshSession();
     loginButton.addEventListener("click", login);
+    manualLoginForm.addEventListener("submit", loginWithCredentials);
     roleSelect.addEventListener("change", () => {
         if (token && activeUser && roleSelect.value !== activeUser.rol) {
             clearSession();
@@ -147,14 +153,8 @@ async function init() {
     userSearch.addEventListener("input", renderUsers);
     novedadForm.addEventListener("submit", saveNovedad);
 
-    if (token && activeUser?.rol === "ADMINISTRADOR") {
-        await loadAdminPanel();
-    }
-    if (token && activeUser?.rol === "COORDINADOR") {
-        await Promise.all([loadDashboard(), loadNovedadPanel()]);
-    }
-    if (token && activeUser?.rol === "PORTERIA") {
-        await loadNovedadPanel();
+    if (token && activeUser?.rol) {
+        await loadRoleData();
     }
 }
 
@@ -189,7 +189,7 @@ function refreshSession() {
     if (token && activeUser) {
         sessionStatus.textContent = `${roleLabel(activeUser.rol)} conectado`;
         sessionStatus.className = "status-pill status-ok";
-        loginButton.textContent = "Cambiar sesion";
+        loginButton.textContent = "Cambiar demo";
         renderProfile();
         updateRoleView();
         return;
@@ -197,47 +197,78 @@ function refreshSession() {
 
     sessionStatus.textContent = "Sin conexion";
     sessionStatus.className = "status-pill status-muted";
-    loginButton.textContent = "Iniciar sesion";
+    loginButton.textContent = "Usar demo";
     renderProfile();
     updateRoleView();
 }
 
 async function login() {
     const credentials = ROLE_LOGINS[roleSelect.value];
+    await authenticate(credentials.correo, credentials.password);
+}
+
+async function loginWithCredentials(event) {
+    event.preventDefault();
+    const correo = manualEmail.value.trim();
+    const password = manualPassword.value;
+    if (!correo || !password) {
+        loginFeedback.textContent = "Digita correo y password.";
+        return;
+    }
+
+    await authenticate(correo, password);
+}
+
+async function authenticate(correo, password) {
     setBusy(true);
+    loginFeedback.textContent = "";
     try {
         const response = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                correo: credentials.correo,
-                password: credentials.password
+                correo,
+                password
             })
         });
         const data = await parseResponse(response);
-        token = data.token;
-        activeUser = data.usuario;
-        localStorage.setItem("sigmaeToken", token);
-        localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
-        refreshSession();
+        applySession(data);
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
-        if (activeUser.rol === "COORDINADOR") {
-            await Promise.all([loadDashboard(), loadNovedadPanel()]);
-        }
-        if (activeUser.rol === "ADMINISTRADOR") {
-            await loadAdminPanel();
-        }
-        if (activeUser.rol === "PORTERIA") {
-            await loadNovedadPanel();
-        }
-        if (activeUser.rol === "ACUDIENTE") {
-            await loadGuardianDashboard();
-        }
+        loginFeedback.textContent = `Sesion iniciada como ${roleLabel(activeUser.rol)}.`;
+        manualPassword.value = "";
+        await loadRoleData();
     } catch (error) {
         clearSession();
+        loginFeedback.textContent = error.message;
         renderError(error.message);
     } finally {
         setBusy(false);
+    }
+}
+
+function applySession(data) {
+    token = data.token;
+    activeUser = data.usuario;
+    if (ROLE_LOGINS[activeUser?.rol]) {
+        roleSelect.value = activeUser.rol;
+    }
+    localStorage.setItem("sigmaeToken", token);
+    localStorage.setItem("sigmaeUser", JSON.stringify(activeUser));
+    refreshSession();
+}
+
+async function loadRoleData() {
+    if (activeUser?.rol === "COORDINADOR") {
+        await Promise.all([loadDashboard(), loadNovedadPanel()]);
+    }
+    if (activeUser?.rol === "ADMINISTRADOR") {
+        await loadAdminPanel();
+    }
+    if (activeUser?.rol === "PORTERIA") {
+        await loadNovedadPanel();
+    }
+    if (activeUser?.rol === "ACUDIENTE") {
+        await loadGuardianDashboard();
     }
 }
 
@@ -1207,7 +1238,11 @@ function resetGate() {
 function setBusy(isBusy) {
     scanButton.disabled = isBusy;
     loginButton.disabled = isBusy;
+    manualEmail.disabled = isBusy;
+    manualPassword.disabled = isBusy;
+    manualLoginButton.disabled = isBusy;
     scanButton.textContent = isBusy ? "Procesando..." : "Registrar";
+    manualLoginButton.textContent = isBusy ? "Entrando..." : "Entrar";
 }
 
 function setAdminBusy(isBusy) {
