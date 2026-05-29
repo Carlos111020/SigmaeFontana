@@ -1,6 +1,7 @@
 package com.sigmae.fontana.service.impl;
 
 import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteRequest;
+import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteResponse;
 import com.sigmae.fontana.dto.estudiante.EstudianteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteResponse;
 import com.sigmae.fontana.entity.EstudianteAcudiente;
@@ -9,6 +10,7 @@ import com.sigmae.fontana.entity.Estudiante;
 import com.sigmae.fontana.entity.enums.EstadoPermanencia;
 import com.sigmae.fontana.exception.BusinessException;
 import com.sigmae.fontana.exception.ResourceNotFoundException;
+import com.sigmae.fontana.mapper.AcudienteMapper;
 import com.sigmae.fontana.mapper.EstudianteMapper;
 import com.sigmae.fontana.repository.AcudienteRepository;
 import com.sigmae.fontana.repository.EstudianteAcudienteRepository;
@@ -31,6 +33,7 @@ public class EstudianteServiceImpl implements EstudianteService {
     private final AcudienteRepository acudienteRepository;
     private final EstudianteAcudienteRepository estudianteAcudienteRepository;
     private final EstudianteMapper estudianteMapper;
+    private final AcudienteMapper acudienteMapper;
 
     @Override
     @Transactional
@@ -138,6 +141,53 @@ public class EstudianteServiceImpl implements EstudianteService {
         estudianteAcudienteRepository.save(relacion);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EstudianteAcudienteResponse> listarAcudientes(Long estudianteId) {
+        if (!estudianteRepository.existsById(estudianteId)) {
+            throw new ResourceNotFoundException("Estudiante no encontrado");
+        }
+        return estudianteAcudienteRepository.findByEstudianteId(estudianteId)
+                .stream()
+                .map(this::toAcudienteResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public EstudianteAcudienteResponse actualizarAcudiente(
+            Long estudianteId,
+            Long acudienteId,
+            EstudianteAcudienteRequest request
+    ) {
+        if (!acudienteId.equals(request.acudienteId())) {
+            throw new BusinessException(
+                    "El acudiente de la ruta no coincide con el cuerpo de la solicitud",
+                    HttpStatus.CONFLICT
+            );
+        }
+        var id = new EstudianteAcudienteId();
+        id.setEstudianteId(estudianteId);
+        id.setAcudienteId(acudienteId);
+        var relacion = estudianteAcudienteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Relacion estudiante-acudiente no encontrada"));
+
+        relacion.setParentesco(request.parentesco());
+        relacion.setResponsablePrincipal(request.responsablePrincipal());
+        return toAcudienteResponse(relacion);
+    }
+
+    @Override
+    @Transactional
+    public void eliminarAcudiente(Long estudianteId, Long acudienteId) {
+        var id = new EstudianteAcudienteId();
+        id.setEstudianteId(estudianteId);
+        id.setAcudienteId(acudienteId);
+        var relacion = estudianteAcudienteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Relacion estudiante-acudiente no encontrada"));
+        estudianteAcudienteRepository.delete(relacion);
+    }
+
     private void validarUnicos(String codigoEstudiantil, String documento) {
         if (estudianteRepository.existsByCodigoEstudiantil(codigoEstudiantil)) {
             throw new BusinessException("El codigo estudiantil ya existe", HttpStatus.CONFLICT);
@@ -153,5 +203,15 @@ public class EstudianteServiceImpl implements EstudianteService {
                 || estudiante.getDocumento().toLowerCase().contains(filtro)
                 || estudiante.getNombres().toLowerCase().contains(filtro)
                 || estudiante.getApellidos().toLowerCase().contains(filtro);
+    }
+
+    private EstudianteAcudienteResponse toAcudienteResponse(EstudianteAcudiente relacion) {
+        return new EstudianteAcudienteResponse(
+                relacion.getEstudiante().getId(),
+                relacion.getAcudiente().getId(),
+                relacion.getParentesco(),
+                relacion.isResponsablePrincipal(),
+                acudienteMapper.toResponse(relacion.getAcudiente())
+        );
     }
 }

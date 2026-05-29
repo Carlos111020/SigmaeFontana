@@ -1,6 +1,7 @@
 package com.sigmae.fontana.service;
 
 import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteRequest;
+import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteResponse;
 import com.sigmae.fontana.dto.estudiante.EstudianteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteResponse;
 import java.util.List;
@@ -20,4 +21,14 @@ public interface EstudianteService {
     List<EstudianteResponse> presentes(Long gradoId, String texto);
 
     void asociarAcudiente(Long estudianteId, EstudianteAcudienteRequest request);
+
+    List<EstudianteAcudienteResponse> listarAcudientes(Long estudianteId);
+
+    EstudianteAcudienteResponse actualizarAcudiente(
+            Long estudianteId,
+            Long acudienteId,
+            EstudianteAcudienteRequest request
+    );
+
+    void eliminarAcudiente(Long estudianteId, Long acudienteId);
 }

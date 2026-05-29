@@ -27,6 +27,163 @@
 
     <section id="profilePanel" class="profile-panel" aria-label="Perfil del usuario"></section>
 
+    <section id="adminPanel" class="admin-panel" aria-label="Gestion administrador">
+        <div class="panel-heading">
+            <h2>Gestion administrador</h2>
+            <button id="refreshAdminButton" class="secondary-button" type="button">Actualizar</button>
+        </div>
+        <div class="admin-tabs" role="tablist" aria-label="Modulos administrador">
+            <button id="studentsAdminTab" class="admin-tab active" type="button">Estudiantes y acudientes</button>
+            <button id="usersAdminTab" class="admin-tab" type="button">Usuarios</button>
+        </div>
+
+        <div id="studentsAdminView" class="admin-view active">
+            <div class="admin-layout">
+                <form id="studentForm" class="student-form">
+                    <input id="studentId" type="hidden">
+                    <input id="guardianId" type="hidden">
+                    <div class="form-heading">
+                        <h3 id="studentFormTitle">Nuevo estudiante</h3>
+                        <button id="clearStudentFormButton" class="secondary-button compact-button" type="button">Limpiar</button>
+                    </div>
+                    <div class="form-section-title">Datos del estudiante</div>
+                    <div class="form-grid">
+                        <label>
+                            Codigo
+                            <input id="studentCode" autocomplete="off" maxlength="30" required placeholder="EST-006">
+                        </label>
+                        <label>
+                            Documento
+                            <input id="studentDocument" autocomplete="off" maxlength="30" required placeholder="100000006">
+                        </label>
+                        <label>
+                            Nombres
+                            <input id="studentNames" autocomplete="off" maxlength="80" required placeholder="Nombre">
+                        </label>
+                        <label>
+                            Apellidos
+                            <input id="studentLastNames" autocomplete="off" maxlength="80" required placeholder="Apellido">
+                        </label>
+                        <label class="wide-field">
+                            Grado
+                            <select id="studentGradeId" required></select>
+                        </label>
+                    </div>
+                    <div class="form-section-title">Datos del acudiente</div>
+                    <div class="form-grid">
+                        <label>
+                            Documento
+                            <input id="guardianDocument" autocomplete="off" maxlength="30" required placeholder="52000006">
+                        </label>
+                        <label>
+                            Telefono
+                            <input id="guardianPhone" autocomplete="off" maxlength="30" required placeholder="3000000000">
+                        </label>
+                        <label>
+                            Nombres
+                            <input id="guardianNames" autocomplete="off" maxlength="80" required placeholder="Nombre acudiente">
+                        </label>
+                        <label>
+                            Apellidos
+                            <input id="guardianLastNames" autocomplete="off" maxlength="80" required placeholder="Apellido acudiente">
+                        </label>
+                        <label>
+                            Correo
+                            <input id="guardianEmail" autocomplete="off" maxlength="120" type="email" required placeholder="acudiente@example.com">
+                        </label>
+                        <label>
+                            Parentesco
+                            <input id="guardianRelationship" autocomplete="off" maxlength="40" required placeholder="Madre">
+                        </label>
+                        <label class="wide-field">
+                            Usuario de acceso
+                            <select id="guardianUserSelect"></select>
+                        </label>
+                        <label class="check-field wide-field">
+                            <input id="guardianMain" type="checkbox" checked>
+                            Responsable principal
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button id="saveStudentButton" class="primary-button" type="submit">Guardar estudiante</button>
+                    </div>
+                    <p id="adminFeedback" class="hint"></p>
+                </form>
+
+                <section class="student-list-panel" aria-label="Listado estudiantes">
+                    <div class="student-toolbar">
+                        <select id="studentStatusFilter" aria-label="Filtro de estado">
+                            <option value="true">Activos</option>
+                            <option value="">Todos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                        <input id="studentSearch" autocomplete="off" placeholder="Buscar estudiante o acudiente">
+                    </div>
+                    <div id="studentList" class="student-list"></div>
+                </section>
+            </div>
+        </div>
+
+        <div id="usersAdminView" class="admin-view">
+            <div class="admin-layout">
+                <form id="userForm" class="student-form">
+                    <input id="userId" type="hidden">
+                    <div class="form-heading">
+                        <h3 id="userFormTitle">Nuevo usuario</h3>
+                        <button id="clearUserFormButton" class="secondary-button compact-button" type="button">Limpiar</button>
+                    </div>
+                    <div class="form-grid">
+                        <label>
+                            Nombres
+                            <input id="userNames" autocomplete="off" maxlength="80" required placeholder="Nombre">
+                        </label>
+                        <label>
+                            Apellidos
+                            <input id="userLastNames" autocomplete="off" maxlength="80" required placeholder="Apellido">
+                        </label>
+                        <label>
+                            Correo
+                            <input id="userEmail" autocomplete="off" maxlength="120" type="email" required placeholder="usuario@sigmae.edu.co">
+                        </label>
+                        <label>
+                            Rol
+                            <select id="userRole" required>
+                                <option value="ADMINISTRADOR">Administrador</option>
+                                <option value="COORDINADOR">Coordinador</option>
+                                <option value="PORTERIA">Porteria</option>
+                                <option value="ACUDIENTE">Acudiente</option>
+                            </select>
+                        </label>
+                        <label>
+                            Password
+                            <input id="userPassword" autocomplete="new-password" maxlength="80" minlength="8" type="password" placeholder="Minimo 8 caracteres">
+                        </label>
+                        <label class="check-field">
+                            <input id="userActive" type="checkbox" checked>
+                            Usuario activo
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button id="saveUserButton" class="primary-button" type="submit">Guardar usuario</button>
+                    </div>
+                    <p id="userFeedback" class="hint"></p>
+                </form>
+
+                <section class="student-list-panel" aria-label="Listado usuarios">
+                    <div class="student-toolbar">
+                        <select id="userStatusFilter" aria-label="Filtro de usuarios">
+                            <option value="true">Activos</option>
+                            <option value="">Todos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                        <input id="userSearch" autocomplete="off" placeholder="Buscar usuario, correo o rol">
+                    </div>
+                    <div id="userList" class="student-list"></div>
+                </section>
+            </div>
+        </div>
+    </section>
+
     <section id="gateWorkspace" class="workspace">
         <aside class="side-panel" aria-label="Tarjetas de prueba">
             <div class="panel-heading">

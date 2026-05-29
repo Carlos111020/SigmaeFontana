@@ -1,6 +1,7 @@
 package com.sigmae.fontana.controller;
 
 import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteRequest;
+import com.sigmae.fontana.dto.estudiante.EstudianteAcudienteResponse;
 import com.sigmae.fontana.dto.estudiante.EstudianteRequest;
 import com.sigmae.fontana.dto.estudiante.EstudianteResponse;
 import com.sigmae.fontana.service.EstudianteService;
@@ -79,6 +80,32 @@ public class EstudianteController {
             @Valid @RequestBody EstudianteAcudienteRequest request
     ) {
         estudianteService.asociarAcudiente(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/acudientes")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','COORDINADOR')")
+    public ResponseEntity<List<EstudianteAcudienteResponse>> listarAcudientes(@PathVariable Long id) {
+        return ResponseEntity.ok(estudianteService.listarAcudientes(id));
+    }
+
+    @PutMapping("/{id}/acudientes/{acudienteId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<EstudianteAcudienteResponse> actualizarAcudiente(
+            @PathVariable Long id,
+            @PathVariable Long acudienteId,
+            @Valid @RequestBody EstudianteAcudienteRequest request
+    ) {
+        return ResponseEntity.ok(estudianteService.actualizarAcudiente(id, acudienteId, request));
+    }
+
+    @DeleteMapping("/{id}/acudientes/{acudienteId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarAcudiente(
+            @PathVariable Long id,
+            @PathVariable Long acudienteId
+    ) {
+        estudianteService.eliminarAcudiente(id, acudienteId);
         return ResponseEntity.noContent().build();
     }
 
