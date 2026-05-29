@@ -33,7 +33,9 @@ Backend Spring Boot y frontend estatico para el control de ingreso, permanencia 
 - `mapper`: conversion de entidades a DTO usando MapStruct.
 - `security`: autenticacion JWT, BCrypt y autorizacion por roles.
 - `exception`: respuestas de error estandarizadas.
-- `static`: interfaz web de talanquera, dashboard coordinador y vista acudiente.
+- `static`: interfaz web servida por Spring Boot para talanquera, dashboard coordinador, vista acudiente y gestion administrativa.
+
+La relacion entre estudiantes y acudientes se implementa con la entidad intermedia `EstudianteAcudiente`. Funcionalmente representa un muchos-a-muchos, pero se modela como entidad propia porque necesita atributos de negocio como `parentesco` y `responsablePrincipal`.
 
 ## Ejecucion Local
 
@@ -72,6 +74,8 @@ URLs locales:
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
+El frontend no requiere Node.js ni servidor Vite. Es HTML, CSS y JavaScript estatico servido directamente por Spring Boot desde `src/main/resources/static`.
+
 ## Pruebas
 
 Las pruebas automatizadas usan H2 en modo PostgreSQL para ser rapidas y no depender de una instalacion local:
@@ -87,6 +91,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-postg
 ```
 
 Ese script prueba el flujo completo: login, creacion de estudiante, creacion de acudiente, asociacion, ingreso por talanquera, salida por talanquera, novedad, dashboard coordinador y consulta del acudiente.
+
+## Evidencias Para Sustentacion
+
+Antes de entregar, se recomienda guardar capturas de:
+
+- Swagger UI con el boton `Authorize` y el token JWT aplicado.
+- Login exitoso por cada rol principal.
+- Simulador web de talanquera registrando ingreso o salida.
+- Dashboard de coordinador con metricas calculadas desde base de datos.
+- Gestion administrativa creando o asociando estudiante y acudiente.
+- IntelliJ Database o pgAdmin mostrando `registros_acceso`, `notificaciones` y cambio de `estado_permanencia`.
 
 ## Datos Semilla
 
@@ -141,6 +156,9 @@ Catalogos y personas:
 - `PUT /api/v1/estudiantes/{id}`
 - `DELETE /api/v1/estudiantes/{id}`
 - `POST /api/v1/estudiantes/{id}/acudientes`
+- `GET /api/v1/estudiantes/{id}/acudientes`
+- `PUT /api/v1/estudiantes/{id}/acudientes/{acudienteId}`
+- `DELETE /api/v1/estudiantes/{id}/acudientes/{acudienteId}`
 - `GET /api/v1/acudientes`
 - `POST /api/v1/acudientes`
 - `PUT /api/v1/acudientes/{id}`

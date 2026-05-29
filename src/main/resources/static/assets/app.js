@@ -282,7 +282,10 @@ async function parseResponse(response) {
     const data = text ? JSON.parse(text) : {};
 
     if (!response.ok) {
-        const error = new Error(data.message || data.detail || "No fue posible completar la operacion.");
+        const validationErrors = Array.isArray(data.errores) && data.errores.length > 0
+            ? ` ${data.errores.join(" ")}`
+            : "";
+        const error = new Error(`${data.mensaje || data.message || data.detail || data.error || "No fue posible completar la operacion."}${validationErrors}`);
         error.status = response.status;
         throw error;
     }

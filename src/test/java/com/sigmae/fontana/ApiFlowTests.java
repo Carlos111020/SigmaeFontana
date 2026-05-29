@@ -137,7 +137,8 @@ class ApiFlowTests {
     @Test
     void noPermiteConsultarDashboardSinToken() throws Exception {
         mockMvc.perform(get("/api/v1/dashboard/metricas"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
     }
 
     @Test
