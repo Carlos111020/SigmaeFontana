@@ -29,6 +29,7 @@ const ROLE_LOGINS = {
 let token = localStorage.getItem("sigmaeToken") || "";
 let activeUser = readStoredUser();
 let testCards = [];
+let fallbackCards = [];
 let adminStudents = [];
 let adminGrades = [];
 let adminGuardians = [];
@@ -48,6 +49,8 @@ const manualPassword = document.querySelector("#manualPassword");
 const manualLoginButton = document.querySelector("#manualLoginButton");
 const loginFeedback = document.querySelector("#loginFeedback");
 const profilePanel = document.querySelector("#profilePanel");
+const cardListTitle = document.querySelector("#cardListTitle");
+const cardListMeta = document.querySelector("#cardListMeta");
 const cardList = document.querySelector("#cardList");
 const cardCode = document.querySelector("#cardCode");
 const gateForm = document.querySelector("#gateForm");
@@ -161,21 +164,51 @@ async function init() {
 async function loadTestCards() {
     try {
         const response = await fetch("/assets/test-cards.json");
-        testCards = await parseResponse(response);
-        renderCards();
+        fallbackCards = await parseResponse(response);
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
     } catch (error) {
+        fallbackCards = [];
         testCards = [];
+        cardListMeta.textContent = "Sin carnets";
         cardList.innerHTML = `<p class="hint">No fue posible cargar los carnets de prueba.</p>`;
     }
 }
 
-function renderCards() {
+async function loadGateCards() {
+    if (!token || !canLoadStudentCards()) {
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
+        return;
+    }
+
+    cardListMeta.textContent = "Cargando...";
+    try {
+        const students = await apiGet("/estudiantes?activo=true");
+        testCards = students
+                .map(student => ({
+                    code: student.codigoEstudiantil,
+                    name: `${student.nombres} ${student.apellidos}`,
+                    grade: student.grado
+                }))
+                .sort((left, right) => left.code.localeCompare(right.code, "es-CO"));
+        renderCards(`${testCards.length} estudiantes activos`);
+    } catch (error) {
+        testCards = fallbackCards;
+        renderCards(`${fallbackCards.length} carnets demo`);
+        showToast(error.message);
+    }
+}
+
+function renderCards(metaText = `${testCards.length} carnets`) {
+    cardListTitle.textContent = canLoadStudentCards() ? "Carnets activos" : "Tarjetas demo";
+    cardListMeta.textContent = metaText;
     cardList.innerHTML = testCards.map(card => `
         <button class="test-card" type="button" data-code="${card.code}">
-            <strong>${card.code}</strong>
-            <span>${card.name} - ${card.grade}</span>
+            <strong>${escapeHtml(card.code)}</strong>
+            <span>${escapeHtml(card.name)} - ${escapeHtml(card.grade)}</span>
         </button>
-    `).join("");
+    `).join("") || `<p class="hint">No hay carnets disponibles.</p>`;
 
     cardList.querySelectorAll("button").forEach(button => {
         button.addEventListener("click", () => {
@@ -259,13 +292,13 @@ function applySession(data) {
 
 async function loadRoleData() {
     if (activeUser?.rol === "COORDINADOR") {
-        await Promise.all([loadDashboard(), loadNovedadPanel()]);
+        await Promise.all([loadDashboard(), loadNovedadPanel(), loadGateCards()]);
     }
     if (activeUser?.rol === "ADMINISTRADOR") {
         await loadAdminPanel();
     }
     if (activeUser?.rol === "PORTERIA") {
-        await loadNovedadPanel();
+        await Promise.all([loadNovedadPanel(), loadGateCards()]);
     }
     if (activeUser?.rol === "ACUDIENTE") {
         await loadGuardianDashboard();
@@ -707,7 +740,7 @@ async function saveStudent(event) {
                 : `Estudiante y acudiente creados: ${saved.codigoEstudiantil}.`;
         showToast(adminFeedback.textContent);
         resetStudentForm();
-        await Promise.all([loadGuardians(), loadStudents()]);
+        await Promise.all([loadGuardians(), loadStudents(), loadGateCards()]);
     } catch (error) {
         adminFeedback.textContent = error.message;
     } finally {
@@ -751,7 +784,7 @@ function renderStudents() {
                 <strong>${guardian ? `${escapeHtml(guardian.nombres)} ${escapeHtml(guardian.apellidos)}` : "Sin acudiente"}</strong>
                 <small>${guardian ? `${escapeHtml(relation.parentesco)} - ${escapeHtml(guardian.telefono)}` : "Pendiente"}</small>
                 <small>${guardian ? escapeHtml(guardian.correo) : ""}</small>
-                <small>${guardian?.usuarioCorreo ? `Login: ${escapeHtml(guardian.usuarioCorreo)}` : ""}</small>
+                <small>${guardian ? (guardian.usuarioCorreo ? `Login: ${escapeHtml(guardian.usuarioCorreo)}` : "Sin usuario de acceso") : ""}</small>
             </div>
             <div class="student-actions">
                 <button class="secondary-button compact-button" type="button" data-action="edit" data-id="${student.id}">Editar</button>
@@ -833,7 +866,7 @@ async function deleteStudent(id) {
         if (studentId.value === String(id)) {
             resetStudentForm();
         }
-        await loadStudents();
+        await Promise.all([loadStudents(), loadGateCards()]);
     } catch (error) {
         adminFeedback.textContent = error.message;
     } finally {
@@ -1268,6 +1301,12 @@ function canUseGate() {
     return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
 }
 
+function canLoadStudentCards() {
+    return activeUser?.rol === "ADMINISTRADOR"
+            || activeUser?.rol === "COORDINADOR"
+            || activeUser?.rol === "PORTERIA";
+}
+
 function canCreateNovedad() {
     return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
 }
@@ -1277,6 +1316,8 @@ function clearSession() {
     activeUser = null;
     localStorage.removeItem("sigmaeToken");
     localStorage.removeItem("sigmaeUser");
+    testCards = fallbackCards;
+    renderCards(`${fallbackCards.length} carnets demo`);
     refreshSession();
 }
 

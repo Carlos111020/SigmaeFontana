@@ -1,5 +1,6 @@
 package com.sigmae.fontana;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -156,6 +157,26 @@ class ApiFlowTests {
                         .content(body))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void porteriaConsultaCarnetsActivosParaTalanquera() throws Exception {
+        var token = login("porteria@sigmae.edu.co", "Porteria123*");
+
+        var response = mockMvc.perform(get("/api/v1/estudiantes?activo=true")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var estudiantes = objectMapper.readTree(response.getResponse().getContentAsString());
+        var contieneEstudianteSemilla = false;
+        for (var estudiante : estudiantes) {
+            if ("EST-001".equals(estudiante.get("codigoEstudiantil").asText())) {
+                contieneEstudianteSemilla = true;
+                break;
+            }
+        }
+        assertTrue(contieneEstudianteSemilla);
     }
 
     @Test
