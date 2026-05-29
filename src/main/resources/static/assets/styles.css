@@ -27,7 +27,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
     font: inherit;
 }
 
@@ -160,6 +161,10 @@ h2 {
 }
 
 .hidden {
+    display: none !important;
+}
+
+[hidden] {
     display: none !important;
 }
 
@@ -319,9 +324,9 @@ h2 {
 }
 
 input,
-select {
+select,
+textarea {
     width: 100%;
-    min-height: 44px;
     padding: 0 12px;
     border: 1px solid #b8c3ca;
     border-radius: 8px;
@@ -330,14 +335,27 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
     outline: 3px solid rgba(20, 108, 95, 0.18);
     border-color: var(--primary);
+}
+
+input,
+select {
+    min-height: 44px;
 }
 
 select {
     width: 160px;
     cursor: pointer;
+}
+
+textarea {
+    min-height: 112px;
+    padding-top: 10px;
+    line-height: 1.4;
+    resize: vertical;
 }
 
 .primary-button,
@@ -460,7 +478,8 @@ select {
     transform: translateY(0);
 }
 
-.dashboard-panel {
+.dashboard-panel,
+.novedad-panel {
     display: none;
     margin-top: 16px;
     padding: 18px;
@@ -470,8 +489,37 @@ select {
     box-shadow: var(--shadow);
 }
 
-.dashboard-panel.visible {
+.dashboard-panel.visible,
+.novedad-panel.visible {
     display: block;
+}
+
+.novedad-form {
+    display: grid;
+    gap: 12px;
+}
+
+.novedad-form-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 0.8fr);
+    gap: 12px;
+}
+
+.novedad-form-grid label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.novedad-form-grid .wide-field {
+    grid-column: 1 / -1;
+}
+
+.novedad-form select {
+    width: 100%;
 }
 
 .admin-panel {
@@ -812,6 +860,10 @@ select {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .novedad-form-grid {
+        grid-template-columns: 1fr;
+    }
+
     .admin-layout {
         grid-template-columns: 1fr;
     }
@@ -861,6 +913,7 @@ select {
     }
 
     .form-grid,
+    .novedad-form-grid,
     .student-card,
     .student-card-rich,
     .user-card,

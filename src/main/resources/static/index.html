@@ -228,6 +228,43 @@
         </section>
     </section>
 
+    <section id="novedadPanel" class="novedad-panel" aria-label="Crear novedad">
+        <div class="panel-heading">
+            <h2>Crear novedad</h2>
+            <span id="novedadRoleHint">Porteria y coordinacion</span>
+        </div>
+        <form id="novedadForm" class="novedad-form">
+            <div class="novedad-form-grid">
+                <label id="novedadStudentSelectField">
+                    Estudiante
+                    <select id="novedadStudentSelect"></select>
+                </label>
+                <label id="novedadStudentCodeField">
+                    Carnet o documento
+                    <input id="novedadStudentCode" autocomplete="off" maxlength="30" placeholder="EST-001">
+                </label>
+                <label>
+                    Tipo
+                    <select id="novedadType" required>
+                        <option value="OBSERVACION_SEGURIDAD">Observacion de seguridad</option>
+                        <option value="SALIDA_ANTICIPADA">Salida anticipada</option>
+                        <option value="INGRESO_NO_CONFIRMADO">Ingreso no confirmado</option>
+                        <option value="ERROR_REGISTRO">Error de registro</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </label>
+                <label class="wide-field">
+                    Descripcion
+                    <textarea id="novedadDescription" maxlength="500" required placeholder="Describe lo ocurrido"></textarea>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button id="saveNovedadButton" class="primary-button" type="submit">Crear novedad</button>
+            </div>
+            <p id="novedadFeedback" class="hint"></p>
+        </form>
+    </section>
+
     <section id="dashboardPanel" class="dashboard-panel" aria-label="Dashboard coordinador">
         <div class="panel-heading">
             <h2>Dashboard coordinador</h2>

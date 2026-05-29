@@ -246,6 +246,45 @@ class ApiFlowTests {
     }
 
     @Test
+    void creaNovedadesDesdePorteriaYCoordinacion() throws Exception {
+        var tokenPorteria = login("porteria@sigmae.edu.co", "Porteria123*");
+        var novedadPorteria = """
+                {
+                  "tipoNovedad": "OBSERVACION_SEGURIDAD",
+                  "descripcion": "Observacion creada desde porteria",
+                  "identificadorEstudiante": "EST-001"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/novedades")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenPorteria))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(novedadPorteria))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tipoNovedad").value("OBSERVACION_SEGURIDAD"))
+                .andExpect(jsonPath("$.estudiante").value("Sofia Gomez"));
+
+        var tokenCoordinador = login("coordinador@sigmae.edu.co", "Coord123*");
+        var estudianteId = estudianteRepository.findByCodigoEstudiantil("EST-001").orElseThrow().getId();
+        var novedadCoordinacion = """
+                {
+                  "tipoNovedad": "OTRO",
+                  "descripcion": "Seguimiento creado desde coordinacion",
+                  "estudianteId": %d
+                }
+                """.formatted(estudianteId);
+
+        mockMvc.perform(post("/api/v1/novedades")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenCoordinador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(novedadCoordinacion))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tipoNovedad").value("OTRO"))
+                .andExpect(jsonPath("$.estudianteId").value(estudianteId));
+    }
+
+    @Test
     void adminGestionaRelacionEstudianteAcudiente() throws Exception {
         var token = login("admin@sigmae.edu.co", "Admin123*");
         var gradoId = gradoRepository.findByNombre("5A").orElseThrow().getId();

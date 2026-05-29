@@ -36,6 +36,8 @@ let adminGuardianUsers = [];
 let adminStudentRelations = new Map();
 let adminUsers = [];
 let activeAdminView = "students";
+let noveltyStudents = [];
+let lastAccessStudent = null;
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const loginButton = document.querySelector("#loginButton");
@@ -101,6 +103,17 @@ const userFeedback = document.querySelector("#userFeedback");
 const userStatusFilter = document.querySelector("#userStatusFilter");
 const userSearch = document.querySelector("#userSearch");
 const userList = document.querySelector("#userList");
+const novedadPanel = document.querySelector("#novedadPanel");
+const novedadRoleHint = document.querySelector("#novedadRoleHint");
+const novedadForm = document.querySelector("#novedadForm");
+const novedadStudentSelectField = document.querySelector("#novedadStudentSelectField");
+const novedadStudentCodeField = document.querySelector("#novedadStudentCodeField");
+const novedadStudentSelect = document.querySelector("#novedadStudentSelect");
+const novedadStudentCode = document.querySelector("#novedadStudentCode");
+const novedadType = document.querySelector("#novedadType");
+const novedadDescription = document.querySelector("#novedadDescription");
+const saveNovedadButton = document.querySelector("#saveNovedadButton");
+const novedadFeedback = document.querySelector("#novedadFeedback");
 
 async function init() {
     await loadTestCards();
@@ -132,9 +145,16 @@ async function init() {
     clearUserFormButton.addEventListener("click", resetUserForm);
     userStatusFilter.addEventListener("change", loadUsers);
     userSearch.addEventListener("input", renderUsers);
+    novedadForm.addEventListener("submit", saveNovedad);
 
     if (token && activeUser?.rol === "ADMINISTRADOR") {
         await loadAdminPanel();
+    }
+    if (token && activeUser?.rol === "COORDINADOR") {
+        await Promise.all([loadDashboard(), loadNovedadPanel()]);
+    }
+    if (token && activeUser?.rol === "PORTERIA") {
+        await loadNovedadPanel();
     }
 }
 
@@ -202,10 +222,13 @@ async function login() {
         refreshSession();
         renderInfo("Sesion iniciada", `Perfil activo: ${roleLabel(activeUser.rol)}.`);
         if (activeUser.rol === "COORDINADOR") {
-            await loadDashboard();
+            await Promise.all([loadDashboard(), loadNovedadPanel()]);
         }
         if (activeUser.rol === "ADMINISTRADOR") {
             await loadAdminPanel();
+        }
+        if (activeUser.rol === "PORTERIA") {
+            await loadNovedadPanel();
         }
         if (activeUser.rol === "ACUDIENTE") {
             await loadGuardianDashboard();
@@ -259,6 +282,12 @@ async function registerAccess(event) {
         });
         const data = await parseResponse(response);
         const normalized = normalizeAccessResponse(data, code, mode);
+        lastAccessStudent = {
+            id: normalized.estudianteId,
+            code: normalized.codigoTarjeta,
+            name: normalized.estudiante
+        };
+        prefillNovedadFromAccess(lastAccessStudent);
         openGate(normalized.codigoTarjeta);
         renderSuccess(normalized);
         notifyGuardian(normalized);
@@ -377,6 +406,100 @@ async function loadGuardianDashboard() {
         renderGuardianDashboard(estudiantes);
     } catch (error) {
         guardianContent.innerHTML = `<p class="hint">${error.message}</p>`;
+    }
+}
+
+async function loadNovedadPanel() {
+    if (!token || !canCreateNovedad()) {
+        return;
+    }
+
+    const isCoordinator = activeUser?.rol === "COORDINADOR";
+    novedadRoleHint.textContent = isCoordinator
+            ? "Selecciona estudiante y registra el seguimiento"
+            : "Registra por carnet o documento";
+    novedadStudentSelectField.hidden = !isCoordinator;
+    novedadStudentCodeField.hidden = isCoordinator;
+    novedadStudentSelect.required = isCoordinator;
+    novedadStudentCode.required = !isCoordinator;
+
+    if (isCoordinator) {
+        novedadFeedback.textContent = "Cargando estudiantes...";
+        try {
+            noveltyStudents = await apiGet("/estudiantes?activo=true");
+            renderNovedadStudentOptions();
+            if (lastAccessStudent?.id) {
+                novedadStudentSelect.value = String(lastAccessStudent.id);
+            }
+            novedadFeedback.textContent = "";
+        } catch (error) {
+            novedadFeedback.textContent = error.message;
+        }
+        return;
+    }
+
+    if (lastAccessStudent?.code) {
+        novedadStudentCode.value = lastAccessStudent.code;
+    }
+    novedadFeedback.textContent = "";
+}
+
+function renderNovedadStudentOptions() {
+    novedadStudentSelect.innerHTML = `
+        <option value="">Selecciona estudiante</option>
+        ${noveltyStudents.map(student => `
+            <option value="${student.id}">${escapeHtml(student.codigoEstudiantil)} - ${escapeHtml(student.nombres)} ${escapeHtml(student.apellidos)} (${escapeHtml(student.grado)})</option>
+        `).join("")}
+    `;
+}
+
+function prefillNovedadFromAccess(student) {
+    if (!student || !canCreateNovedad()) {
+        return;
+    }
+    if (activeUser?.rol === "COORDINADOR" && student.id) {
+        novedadStudentSelect.value = String(student.id);
+    }
+    if (activeUser?.rol === "PORTERIA" && student.code) {
+        novedadStudentCode.value = student.code;
+    }
+}
+
+async function saveNovedad(event) {
+    event.preventDefault();
+
+    if (!token || !canCreateNovedad()) {
+        novedadFeedback.textContent = "Inicia sesion como Porteria o Coordinador.";
+        return;
+    }
+
+    const payload = {
+        tipoNovedad: novedadType.value,
+        descripcion: novedadDescription.value.trim()
+    };
+    if (activeUser?.rol === "COORDINADOR") {
+        payload.estudianteId = Number(novedadStudentSelect.value);
+    } else {
+        payload.identificadorEstudiante = novedadStudentCode.value.trim().toUpperCase();
+    }
+
+    setNovedadBusy(true);
+    try {
+        const saved = await apiRequest("/novedades", {
+            method: "POST",
+            body: payload
+        });
+        novedadFeedback.textContent = `Novedad creada para ${saved.estudiante}.`;
+        showToast(novedadFeedback.textContent);
+        novedadDescription.value = "";
+        novedadType.value = "OBSERVACION_SEGURIDAD";
+        if (activeUser?.rol === "COORDINADOR") {
+            await loadDashboard();
+        }
+    } catch (error) {
+        novedadFeedback.textContent = error.message;
+    } finally {
+        setNovedadBusy(false);
     }
 }
 
@@ -934,8 +1057,10 @@ function updateRoleView() {
     const isAdmin = activeUser?.rol === "ADMINISTRADOR";
     const isCoordinator = activeUser?.rol === "COORDINADOR";
     const isGuardian = effectiveRole === "ACUDIENTE";
+    const hasNovedadAccess = canCreateNovedad();
     adminPanel.classList.toggle("visible", isAdmin);
     dashboardPanel.classList.toggle("visible", isCoordinator);
+    novedadPanel.classList.toggle("visible", hasNovedadAccess);
     guardianPanel.classList.toggle("visible", activeUser?.rol === "ACUDIENTE");
     gateWorkspace.classList.toggle("hidden", isGuardian || isAdmin);
     if (!isAdmin) {
@@ -949,6 +1074,9 @@ function updateRoleView() {
     }
     if (!isGuardian) {
         guardianContent.innerHTML = "";
+    }
+    if (!hasNovedadAccess) {
+        novedadFeedback.textContent = "";
     }
 }
 
@@ -1038,7 +1166,16 @@ function setAdminBusy(isBusy) {
             : (userId.value ? "Actualizar usuario" : "Guardar usuario");
 }
 
+function setNovedadBusy(isBusy) {
+    saveNovedadButton.disabled = isBusy;
+    saveNovedadButton.textContent = isBusy ? "Creando..." : "Crear novedad";
+}
+
 function canUseGate() {
+    return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
+}
+
+function canCreateNovedad() {
     return activeUser?.rol === "PORTERIA" || activeUser?.rol === "COORDINADOR";
 }
 

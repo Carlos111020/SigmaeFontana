@@ -3,10 +3,12 @@ package com.sigmae.fontana.service.impl;
 import com.sigmae.fontana.dto.novedad.EstadoNovedadRequest;
 import com.sigmae.fontana.dto.novedad.NovedadRequest;
 import com.sigmae.fontana.dto.novedad.NovedadResponse;
+import com.sigmae.fontana.entity.Estudiante;
 import com.sigmae.fontana.entity.Novedad;
 import com.sigmae.fontana.entity.enums.EstadoNovedad;
 import com.sigmae.fontana.entity.enums.TipoNotificacion;
 import com.sigmae.fontana.entity.enums.TipoNovedad;
+import com.sigmae.fontana.exception.BusinessException;
 import com.sigmae.fontana.exception.ResourceNotFoundException;
 import com.sigmae.fontana.mapper.NovedadMapper;
 import com.sigmae.fontana.repository.EstudianteRepository;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,8 +38,7 @@ public class NovedadServiceImpl implements NovedadService {
     @Override
     @Transactional
     public NovedadResponse crear(NovedadRequest request, String correoUsuario) {
-        var estudiante = estudianteRepository.findById(request.estudianteId())
-                .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado"));
+        var estudiante = resolverEstudiante(request);
         var usuario = usuarioRepository.findByCorreo(correoUsuario)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario responsable no encontrado"));
 
@@ -50,6 +52,26 @@ public class NovedadServiceImpl implements NovedadService {
         var guardada = novedadRepository.save(novedad);
         notificationService.notificarAcudientes(estudiante, TipoNotificacion.NOVEDAD, request.descripcion());
         return novedadMapper.toResponse(guardada);
+    }
+
+    private Estudiante resolverEstudiante(NovedadRequest request) {
+        if (request.estudianteId() != null) {
+            return estudianteRepository.findById(request.estudianteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado"));
+        }
+
+        var identificador = request.identificadorEstudiante();
+        if (identificador != null && !identificador.isBlank()) {
+            var normalizado = identificador.trim();
+            return estudianteRepository.findByCodigoEstudiantil(normalizado)
+                    .or(() -> estudianteRepository.findByDocumento(normalizado))
+                    .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado"));
+        }
+
+        throw new BusinessException(
+                "Indica el estudiante por id, codigo estudiantil o documento",
+                HttpStatus.BAD_REQUEST
+        );
     }
 
     @Override
